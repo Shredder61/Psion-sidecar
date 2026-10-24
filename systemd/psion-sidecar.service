@@ -1,0 +1,16 @@
+[Unit]
+Description=Psion Sidecar web server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace sidecar with the Linux account used for the installation.
+User=sidecar
+WorkingDirectory=/opt/psion-sidecar
+ExecStart=/usr/bin/python3 /opt/psion-sidecar/sidecar_web.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

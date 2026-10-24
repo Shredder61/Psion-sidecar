@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+.DS_Store
+*.log
+
+# Local data: downloaded crossword files are not committed.
+crosswords/*
+!crosswords/.gitkeep
+
+# Local backups and downloaded third-party packages
+backups/
+*.sis
+*.zip

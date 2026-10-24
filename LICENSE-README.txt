@@ -1,0 +1,1 @@
+No software licence is included yet. Before publishing, the maintainer should confirm the right to license the code and choose an appropriate licence. Do not imply that external services, catalogue data, or downloadable software are licensed by this repository.
