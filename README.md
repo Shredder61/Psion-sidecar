@@ -1,46 +1,57 @@
 # Psion Sidecar
 
-A small Python web server intended to provide a Psion-friendly homepage on a Raspberry Pi. The Pi (Sidecar) implementation gives visibility of downloaded files, today's Guardian crossword download, as well as access to the Psion community software (direct download of filtered programs) and a Psion-friendly search page, which can be accessed using Opera or PsiWeb from your Psion device.
+Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads, access to locally stored crossword files, Psion Community software browsing and a Psion-friendly search page.
 
-Of course, the Py crossword program (guardian_pi.py) can be run independently to pull crosswords from a computer with Python which you can then convert with the provided OPL converter.
+The Sidecar can be accessed from a Psion using a compatible browser such as Opera or PsiWeb. The Raspberry Pi provides the web server and connects to the external services used by the project.
 
-The Sidecar project includes:
+The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. The resulting text files can then be transferred to the Psion and converted using a separate OPL program.
 
-- Guardian Quick and Cryptic crossword download requests and a text-file archive for RMR / FatCatz crosswords (EPOC32)
-- A Psion software catalogue interface
-- A FrogFind proxy page
-- A systemd service example for running the Pi server at boot
-- An OPL program (Psion) which transcribes the downloaded crossword text file into the required format for RMR/FatCatz programs
+## What's included
 
-The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar server uses Python's standard library and does not require a third-party Python package. A Raspberry Pi is required to host the browser-based Sidecar, but is not essential to run the standalone crossword downloader (guardian_pi.py), if that's all you need. The program guardian_pi.py produces the text file; the OPL converter runs separately on the Psion.
+- Guardian Quick and Cryptic crossword download requests.
+- A local text-file archive for downloaded crosswords intended for use with RMR and FatCatz crossword programs on EPOC32.
+- A Psion Community software catalogue interface, including filtered program searches and download links.
+- A FrogFind search page accessible through the Sidecar.
+- An example systemd service for starting the server automatically when the Raspberry Pi boots.
+- A separate Psion-side OPL conversion workflow for preparing crossword text for compatible crossword applications.
+
+The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar web server uses Python's standard library and does not require third-party Python packages.
+
+A Raspberry Pi is required to host the browser-based Sidecar, but it is not necessary if you only want to run the standalone crossword downloader.
 
 ## Status and limitations
 
-This is a community project, provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Download and catalogue behaviour therefore depends on those external services remaining compatible and accessible. The OPL program will at some point be integrated into the Crossword text file retrieval. The Home page will be revised/improved. 
+This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible.
+
+The standalone downloader and browser-based Sidecar are not yet fully aligned, although the intention is to make their interfaces more consistent over time.
+
+The homepage will continue to evolve. Integrating the OPL conversion process more closely into crossword retrieval is a planned improvement.
 
 ## Guardian Quick and Cryptic crossword downloads
 
 There are two ways to download Guardian Quick and Cryptic crosswords for use on the Psion:
 
-- **Standalone downloader:** Run `guardian_pi.py` directly on a PC or Raspberry Pi.
-- **Sidecar downloader:** Request downloads through the web interface hosted on a Raspberry Pi, including from a compatible browser on the Psion itself.
+- **Standalone downloader:** run `guardian_pi.py` directly on a PC or Raspberry Pi.
+- **Sidecar downloader:** request downloads through the web interface hosted on a Raspberry Pi, including from a compatible browser on the Psion itself.
 
-The two interfaces are not yet fully aligned, although they are intended to become more similar over time. I recommend starting with the standalone downloader to understand how the download process works before using the Sidecar. The output text file for either needs to be converted using the provided OPL converter on the Psion.
+I recommend starting with the standalone downloader to understand the download process before using the Sidecar.
+
+Both methods produce a text file that must be converted on the Psion using the appropriate OPL converter before it can be opened in a compatible RMR or FatCatz crossword program.
 
 ## Guardian crossword standalone downloader: `guardian_pi.py`
 
-The downloader retrieves the Guardian's accessible, text-based crossword page and converts the puzzle into the text format expected by the Psion OPL converter, ready for opening in the RMR / FatCatz crossword program.
+The downloader retrieves the Guardian's accessible, text-based crossword page and saves the puzzle in the text format expected by the Psion OPL converter.
 
-Before downloading, the program checks whether the crossword is already available locally and whether it is present in the Guardian's own archive. If a download is appropriate, it retrieves the puzzle and saves the resulting text file in the specified output directory.
+Before downloading, the program checks whether the crossword is already available locally and whether it is present in the Guardian's own archive. If a download is appropriate, it retrieves the puzzle and saves the resulting text file in the output directory.
 
-Downloaded files use names such as:
+Example filenames include:
 
 ```text
 Quick_17028.txt
 Cryptic_30103.txt
 ```
 
-You can specify the crossword type and number, and optionally the output directory. For example:
+To download a Quick crossword by number, specifying an output directory, run:
 
 ```bash
 python guardian_pi.py quick 17028 /home/pi/crosswords
@@ -48,55 +59,89 @@ python guardian_pi.py quick 17028 /home/pi/crosswords
 
 If no output directory is specified, the program uses its configured default.
 
-### How it retrieves crosswords
+### How crosswords are retrieved
 
 The downloader uses the Guardian's accessible crossword pages:
 
-`https://www.theguardian.com/crosswords/accessible/...`
+<https://www.theguardian.com/crosswords/accessible/>
 
 It deliberately uses these pages rather than the Guardian's JSON/API interface.
 
-The script is compatible with Python 2.7 and Python 3.
+The script supports Python 2.7 and Python 3. The recommended environment for new installations is Python 3.
 
 ## Guardian crossword Sidecar downloader
 
-This runs the same guardian_pi.py program and presents the results in the browser.
+The Sidecar web interface uses `guardian_pi.py` to process crossword download requests and presents the results through a browser.
+
+The homepage also provides access to locally stored crossword files, including previously downloaded puzzles.
 
 ## Psion Community software Sidecar downloader
 
-When you select the Psion Community software link on the homepage it will load a search box. The software will locate .SIS installer files and present you with one or more download links. When you initiate a download, the default filename is Download.bin - wait for the file to transfer and then select "Save", the filename will then match the repository name. You can run it as a .bin file and it will be correctly recognised by your installer.
+Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and obtain download links for matching `.SIS` installer packages.
 
-The software catalogue uses two index files in the project directory:
+The catalogue relies on two JSON index files in the project directory:
 
 - `epoc32_index.json`
 - `software_index.json`
 
-Both files are included in this release. They provide the catalogue data used by the Psion Community software browsing features. Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages.
+Both files are included in the current repository. They supply the catalogue data used by the software browsing features.
 
-## Quick start - Installing the browser-based Sidecar
+### Downloading software to the Psion
+
+When you initiate a download, the browser may initially use `Download.bin` as the filename. Wait for the transfer to finish, then select **Save** when prompted. The saved filename should then match the name supplied by the repository.
+
+The downloaded file may retain a `.bin` extension. Follow the behaviour of your Psion browser and installer when saving and installing the file.
+
+The availability of individual packages depends on the external software archive and the links recorded in the catalogue.
+
+Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes does not grant permission to redistribute the software they describe.
+
+## Quick start: installing the browser-based Sidecar
+
+Clone the repository and enter the project directory:
 
 ```bash
-git clone https://github.com/Shredder61/Psion-sidecar.git psion-sidecar
-cd psion-sidecar
+git clone https://github.com/Shredder61/Psion-sidecar.git
+cd Psion-sidecar
+```
+
+Check your Python version and compile-check the scripts:
+
+```bash
 python3 --version
 python3 -m py_compile sidecar_web.py guardian_pi.py
+```
+
+Start the server in the foreground:
+
+```bash
 python3 sidecar_web.py
 ```
 
-Open `http://<raspberry-pi-address>:8081/` from a device on the same network. Stop the foreground server with `Ctrl+C`.
+From a device on the same network, open:
 
-The server binds to `0.0.0.0` on port `8081` by default. Do not expose this port directly to the public internet without adding appropriate security controls.
+```text
+http://<raspberry-pi-address>:8081/
+```
+
+Replace `<raspberry-pi-address>` with the hostname or IP address of your Raspberry Pi.
+
+Stop the foreground server with `Ctrl+C`.
+
+The server listens on `0.0.0.0` on port `8081` by default. Do not expose this port directly to the public internet without appropriate security controls.
 
 ## Features of the Sidecar homepage
 
-- Psion software catalogue pages (requires index data)
-- FrogFind access through the Pi
-- Quick and Cryptic crossword download by puzzle number
-- Local crossword archive
+- Guardian Quick and Cryptic crossword download requests.
+- Access to locally stored crossword files.
+- Psion Community software catalogue and download links, when the required index data is available.
+- FrogFind search access through the Pi.
 
 ## Installation as a service
 
-See [docs/INSTALL.md](docs/INSTALL.md) for a dedicated systemd installation. See [docs/PSION-SETUP.md](docs/PSION-SETUP.md) for use from a Psion.
+See [docs/INSTALL.md](docs/INSTALL.md) for instructions on installing the server as a systemd service.
+
+See [docs/PSION-SETUP.md](docs/PSION-SETUP.md) for notes on accessing the Sidecar from a Psion.
 
 ## Project files
 
@@ -111,6 +156,6 @@ See [docs/INSTALL.md](docs/INSTALL.md) for a dedicated systemd installation. See
 
 ## Copyright, permissions and external services
 
-This repository contains the Sidecar project code only. It does not grant rights to Guardian content, FrogFind, Psion software packages, or third-party catalogue data. Respect the terms and copyright of each external service and file source.
+This repository does not grant rights to Guardian crossword content, FrogFind, Psion software packages or third-party catalogue data. Respect the copyright, terms of use and redistribution conditions of each external service and file source.
 
-No project licence has been selected in this release. Before inviting others to reuse, modify or redistribute the code, the maintainer should choose and add an appropriate licence for code they have the right to license.
+No project software licence has been selected for this release. Until an appropriate licence is added, do not assume that the code is offered under an open-source licence or that permission to reuse, modify or redistribute it has been granted.
