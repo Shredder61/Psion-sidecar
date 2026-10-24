@@ -1,57 +1,71 @@
 # Install on Raspberry Pi OS
 
-These instructions assume a Raspberry Pi on a trusted home network, Python 3, and an account with `sudo` access.
+These instructions assume a Raspberry Pi on a trusted home network, Raspberry Pi OS, Python 3, and an account with `sudo` access.
 
-## 1. Install the project
+## 1. Clone the repository
 
-Choose `/opt/psion-sidecar` as the installation directory:
+Run these commands on the Raspberry Pi:
+
+```bash
+git clone https://github.com/Shredder61/Psion-sidecar.git
+cd Psion-sidecar
+```
+
+## 2. Install the application files
+
+The server expects its crossword storage directory and, for the software catalogue, both JSON indexes to be beside `sidecar_web.py`.
+
+From the repository root, run:
 
 ```bash
 sudo mkdir -p /opt/psion-sidecar
-sudo cp sidecar_web.py guardian_pi.py /opt/psion-sidecar/
+sudo cp sidecar_web.py guardian_pi.py epoc32_index.json software_index.json /opt/psion-sidecar/
 sudo mkdir -p /opt/psion-sidecar/crosswords
+sudo install -m 0644 systemd/psion-sidecar.service /etc/systemd/system/psion-sidecar.service
 sudo chown -R "$USER":"$USER" /opt/psion-sidecar
 ```
 
-Run those commands from the checked-out project directory. If you prefer a different location, update the `ROOT` and index-file paths are already relative to `sidecar_web.py`; also update the `WorkingDirectory` and `ExecStart` values in the service file.
+The current GitHub repository includes `epoc32_index.json` and `software_index.json`. If you use a source package that does not include them, omit those two filenames from the `cp` command and obtain the index files separately from sources you are authorised to use. The software catalogue will not work until both files are installed beside `sidecar_web.py`.
 
-## 2. Test in the foreground
+The service file assumes the installation path `/opt/psion-sidecar`. If you choose another path, edit `WorkingDirectory` and `ExecStart` in `systemd/psion-sidecar.service` before installing it.
+
+## 3. Test the server in the foreground
 
 ```bash
 cd /opt/psion-sidecar
+python3 --version
 python3 -m py_compile sidecar_web.py guardian_pi.py
 python3 sidecar_web.py
 ```
 
-From another device on the same LAN, open `http://<raspberry-pi-address>:8081/`. Stop the foreground server with `Ctrl+C` before enabling the service.
+From another device on the same trusted local network, open:
+
+`http://<raspberry-pi-address>:8081/`
+
+Replace the placeholder with the Raspberry Pi's hostname or IP address. Stop the foreground server with `Ctrl+C` before enabling the service.
 
 If port 8081 is already in use, change `PORT` near the top of `sidecar_web.py` and use the same port in the URL.
 
-## 3. Configure automatic startup
+## 4. Configure automatic startup
 
-The example service uses a dedicated account named `sidecar`. Create it and assign ownership:
+Create the dedicated service account if it does not already exist, then assign ownership of the installation:
 
 ```bash
-sudo useradd --system --home-dir /opt/psion-sidecar --shell /usr/sbin/nologin sidecar
+id sidecar >/dev/null 2>&1 || sudo useradd --system --home-dir /opt/psion-sidecar --shell /usr/sbin/nologin sidecar
 sudo chown -R sidecar:sidecar /opt/psion-sidecar
-sudo install -m 0644 systemd/psion-sidecar.service /etc/systemd/system/psion-sidecar.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now psion-sidecar.service
 sudo systemctl status psion-sidecar.service --no-pager
 ```
 
-If you have already installed the files under a different path, edit `/etc/systemd/system/psion-sidecar.service` to match your actual installation directory before starting it.
-
-View logs with:
+View recent service logs with:
 
 ```bash
 sudo journalctl -u psion-sidecar.service -n 100 --no-pager
 ```
 
-## 4. Optional software catalogue data
-
-The software catalogue routes expect `epoc32_index.json` and `software_index.json` beside `sidecar_web.py`. These files are not shipped in the repository. Only install data that you are authorised to use, and do not commit large or third-party data files without checking redistribution rights.
+If the service does not start, check the log output before trying again.
 
 ## Security notes
 
-The server is designed for a trusted local network. It has no login or access control and binds to all network interfaces by default. Do not port-forward port 8081 from your router to the public internet. Consider a firewall if the Pi is on a network shared with untrusted devices.
+The server binds to all network interfaces on port 8081 by default and has no login or access control. It is intended for a trusted local network. Do not forward port 8081 from your router to the public internet. Consider firewall rules if the Raspberry Pi is reachable by untrusted devices.

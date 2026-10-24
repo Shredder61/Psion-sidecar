@@ -77,7 +77,7 @@ The downloader uses the Guardian's accessible crossword pages:
 
 It deliberately uses these pages rather than the Guardian's JSON/API interface.
 
-The script supports Python 2.7 and Python 3. The recommended environment for new installations is Python 3.
+The standalone downloader includes compatibility code for Python 2.7 and Python 3, although Python 3 is recommended. The browser-based web server requires Python 3.
 
 ## Guardian crossword Sidecar downloader
 
