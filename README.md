@@ -7,7 +7,7 @@ Of course, the Py crossword program (guardian_pi.py) can be run independently to
 The project includes:
 
 - Guardian Quick and Cryptic crossword download requests and a text-file archive for RMR / FatCatz crosswords (EPOC32)
-- A Psion software catalogue interface, when the catalogue index files are supplied
+- A Psion software catalogue interface
 - A FrogFind proxy page
 - A systemd service example for running the server at boot
 - An OPL program which transcribes the downloaded crossword text file into the required format for RMR/FatCatz programs
