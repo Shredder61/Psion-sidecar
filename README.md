@@ -1,6 +1,6 @@
 # Psion Sidecar
 
-Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads, access to locally stored crossword files, Psion Community software browsing and a Psion-friendly search page.
+Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads, access to locally stored crossword files, Psion Community software browsing and a Psion-friendly search page. The 'back-office' code is working well, but the homepage display will receive further updates as I develop the content.
 
 The Sidecar can be accessed from a Psion using a compatible browser such as Opera or PsiWeb. The Raspberry Pi provides the web server and connects to the external services used by the project.
 
