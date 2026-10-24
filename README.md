@@ -6,6 +6,8 @@ The Sidecar can be accessed from a Psion using a compatible browser such as Oper
 
 The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. The resulting text files can then be transferred to the Psion and converted using a separate OPL program.
 
+Thank you to Kian (https://www.kianryan.co.uk) and Daniel (https://github.com/danieledge) who created the impetus (connectivity) to get rolling with this after my two Psions had been in the closet for a decade or so.
+
 ## What's included
 
 - Guardian Quick and Cryptic crossword download requests.
