@@ -12,7 +12,7 @@ The Sidecar project includes:
 - A systemd service example for running the Pi server at boot
 - An OPL program (Psion) which transcribes the downloaded crossword text file into the required format for RMR/FatCatz programs
 
-The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar server uses Python's standard library and does not require a third-party Python package. A Raspberry Pi is required to host the browser-based Sidecar, but is not essential to run the standalone crossword downloader, if that's all you need.
+The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar server uses Python's standard library and does not require a third-party Python package. A Raspberry Pi is required to host the browser-based Sidecar, but is not essential to run the standalone crossword downloader (guardian_pi.py), if that's all you need. The program guardian_pi.py produces the text file; the OPL converter runs separately on the Psion.
 
 ## Status and limitations
 
@@ -76,7 +76,7 @@ Both files are included in this release. They provide the catalogue data used by
 ## Quick start - Installing the browser-based Sidecar
 
 ```bash
-git clone <YOUR-REPOSITORY-URL> psion-sidecar
+git clone https://github.com/Shredder61/Psion-sidecar.git psion-sidecar
 cd psion-sidecar
 python3 --version
 python3 -m py_compile sidecar_web.py guardian_pi.py
@@ -105,7 +105,9 @@ See [docs/INSTALL.md](docs/INSTALL.md) for a dedicated systemd installation. See
 - `systemd/psion-sidecar.service` — example systemd service
 - `crosswords/` — local crossword storage
 - `docs/` — installation and usage notes
-- '
+- `epoc32_index.json` - Psion Community software index (EPOC32)
+- `software_index.json` - Psion Community software index (complete)
+- `crossword converter_v01.TXT` - OPL program for the Psion
 
 ## Copyright, permissions and external services
 
