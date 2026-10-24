@@ -145,6 +145,17 @@ The server listens on `0.0.0.0` on port `8081` by default. Do not expose this po
 - Psion Community software catalogue and download links, when the required index data is available.
 - FrogFind search access through the Pi.
 
+## Screenshots
+
+The screenshots below show the Sidecar workflow on a Psion, from browsing
+files and downloading software to importing a crossword.
+
+![Psion file listing](docs/images/File%20listing%201.png)
+
+![Downloading a software package](docs/images/Download%20in%20progress.png)
+
+![A cryptic crossword after import](docs/images/Imported%20crossword%20-%20cryptic.png)
+
 ## Installation as a service
 
 See [docs/INSTALL.md](docs/INSTALL.md) for instructions on installing the server as a systemd service.
