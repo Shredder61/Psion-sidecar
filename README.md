@@ -40,6 +40,14 @@ Both methods produce a text file that must be converted on the Psion using the a
 
 ## Guardian crossword standalone downloader: `guardian_pi.py`
 
+Menu options:
+1	Download one crossword
+2	Download a batch of crosswords
+3	Download today's crossword
+4	Exit
+
+Ranges currently displayed in the code are Quick 9093–17583 and Cryptic 21620–30109, based on the archive limits recorded in the source. The “today's crossword” option checks the Guardian for the latest number, so those fixed limits may need updating as the archive grows.
+
 The downloader retrieves the Guardian's accessible, text-based crossword page and saves the puzzle in the text format expected by the Psion OPL converter.
 
 Before downloading, the program checks whether the crossword is already available locally and whether it is present in the Guardian's own archive. If a download is appropriate, it retrieves the puzzle and saves the resulting text file in the output directory.
