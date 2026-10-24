@@ -149,8 +149,8 @@ The server listens on `0.0.0.0` on port `8081` by default. Do not expose this po
 
 ## Screenshots
 
-The screenshots below show the Sidecar workflow on a Psion, from browsing
-files and downloading software to importing a crossword.
+The screenshots below show examples of the Sidecar workflow on a Psion 5mx, from browsing
+files in the Psion software community archive and downloading software to importing a crossword from the guardian (see doc/images for more detail).
 
 ![Psion file listing](docs/images/File%20listing%201.png)
 
