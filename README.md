@@ -85,6 +85,10 @@ The Sidecar web interface uses `guardian_pi.py` to process crossword download re
 
 The homepage also provides access to locally stored crossword files, including previously downloaded puzzles.
 
+## Importing Guardian crosswords into RMS / FatCatz Crossword
+
+The initial download will be a text file and needs to be converted using the Crossword converter_v01.opl program (Crossword converter_v01.txt is imported into the OPL program and gets stored as .opl. Run the .opl program and, using its file browser, open the downloaded Guardian crossword file. The file will be converted. You will be given the option to delete the downloaded Guardian crossword after conversion which is what I recommend. Now open the RMR / FatCatz Crossword program and select File-Open and search for the converted Guardian crossword (has a suffix - converted). Open the file (again, select delete original input file), and the converted file will load into the crossword. The process is the same whether you run the guardian_pi.py in Python or run its procedures via the Sidecar. 
+
 ## Psion Community software Sidecar downloader
 
 Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and obtain download links for matching `.SIS` installer packages.
