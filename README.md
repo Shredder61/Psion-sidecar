@@ -1,6 +1,8 @@
 # Psion Sidecar
 
-A small Python web server intended to provide a Psion-friendly homepage on a Raspberry Pi. The project includes:
+A small Python web server intended to provide a Psion-friendly homepage on a Raspberry Pi. Of course, the Py program can be run independently to pull crosswords but the Pi implementation gives visibility of dowloaded files, today's crossword download, etc. 
+
+The project includes:
 
 - Guardian Quick and Cryptic crossword download requests and a text-file archive
 - A Psion software catalogue interface, when the catalogue index files are supplied
@@ -13,14 +15,16 @@ The project was developed and tested on Raspberry Pi OS with Python 3.13. The se
 
 This is a community project, provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Download and catalogue behaviour therefore depends on those external services remaining compatible and accessible.
 
-The software catalogue requires two data files in the project directory:
+### Software catalogue data
+
+The software catalogue uses two index files in the project directory:
 
 - `epoc32_index.json`
 - `software_index.json`
 
-They are intentionally **not included** in this source release. Obtain or generate them from sources you are entitled to use, and check their provenance and redistribution terms before publishing them. Without these files, the crossword features can still be used, but the software catalogue endpoints will show an error.
+Both files are included in this release. They provide the catalogue data used by the software browsing features. Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages.
 
-Downloaded crossword files are also not included. The `crosswords/` directory is created for local downloads.
+Downloaded crossword files are not included. The `crosswords/` directory is created for local downloads.
 
 ## Quick start
 
