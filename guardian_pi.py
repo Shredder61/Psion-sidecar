@@ -479,15 +479,21 @@ def main():
         choice = input("Select: ").strip()
 
         if choice == "1":
-            kind = input(
-                "Crossword type (quick/cryptic) "
-                "[Quick 9093-17583 / Cryptic 21620-30109]: "
-            ).strip().lower()
+            # Ask for the crossword type first, then display only that type's range.
+            kind = input("Crossword type (quick/cryptic): ").strip().lower()
 
             if kind not in ("quick", "cryptic"):
                 print("Please enter quick or cryptic.")
                 continue
 
+            if kind == "quick":
+                low, high = QUICK_MIN, QUICK_MAX
+                label = "Quick"
+            else:
+                low, high = CRYPTIC_MIN, CRYPTIC_MAX
+                label = "Cryptic"
+
+            print("%s crossword number range: %d to %d." % (label, low, high))
             number_text = input("Crossword number: ").strip()
             try:
                 number = int(number_text)
@@ -496,7 +502,7 @@ def main():
                 continue
 
             output_dir = input(
-                "Output directory (Enter for current folder (e.g., Text files)): "
+                "Output directory (enter the full path, including a new directory if you want one; Enter for default which is to create/populate a crossword folder in the same folder as the program): "
             ).strip()
 
             if not output_dir:
@@ -505,15 +511,21 @@ def main():
             download_one(kind, number, output_dir)
 
         elif choice == "2":
-            kind = input(
-                "Crossword type (quick/cryptic) "
-                "[Quick 9093-17583 / Cryptic 21620-30109]: "
-            ).strip().lower()
+            # Ask for the crossword type first, then display only that type's range.
+            kind = input("Crossword type (quick/cryptic): ").strip().lower()
 
             if kind not in ("quick", "cryptic"):
                 print("Please enter quick or cryptic.")
                 continue
 
+            if kind == "quick":
+                low, high = QUICK_MIN, QUICK_MAX
+                label = "Quick"
+            else:
+                low, high = CRYPTIC_MIN, CRYPTIC_MAX
+                label = "Cryptic"
+
+            print("%s crossword number range: %d to %d." % (label, low, high))
             first_text = input("First crossword number: ").strip()
             count_text = input("Number to download: ").strip()
 
@@ -530,13 +542,6 @@ def main():
 
             last = first + count - 1
 
-            if kind == "quick":
-                low, high = QUICK_MIN, QUICK_MAX
-                label = "Quick"
-            else:
-                low, high = CRYPTIC_MIN, CRYPTIC_MAX
-                label = "Cryptic"
-
             if first < low or last > high:
                 print(
                     "\nERROR: %s batch would run from %d to %d, "
@@ -546,7 +551,7 @@ def main():
                 continue
 
             output_dir = input(
-                "Output directory (Enter for current folder; e.g., Text files): "
+                "Output directory (enter the full path, including a new directory if you want one; Enter for default which is to create/populate a crossword folder in the same folder as the program): "
             ).strip()
 
             if not output_dir:
