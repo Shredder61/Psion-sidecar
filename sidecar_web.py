@@ -11,7 +11,7 @@ import json
 HOST = "0.0.0.0"
 PORT = 8081
 
-ROOT = Path("/home/inkypikitch/guardian-migration/crosswords")
+ROOT = Path(__file__).resolve().parent / "crosswords"
 
 
 class SidecarHandler(SimpleHTTPRequestHandler):
