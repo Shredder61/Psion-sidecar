@@ -1,0 +1,359 @@
+PROC ioType:
+REM GUARDIAN CROSSWORD TO RMR GRID WITH SOLUTIONS
+REM Input: Guardian accessible crossword text
+REM Output: <grid> with answers filled, then clues
+
+LOCAL ret%,fName$(255),txt$(255),address%
+LOCAL handle%,mode%,k%
+LOCAL ROW$(160,160)
+LOCAL X%
+LOCAL Z%
+LOCAL File1$(255)
+LOCAL CLUE$(160)
+LOCAL NEWB$(20,20)
+LOCAL FILLED$(20,20)
+LOCAL REF$(20)
+LOCAL MATRIX$(1)
+LOCAL REFX%
+LOCAL CLUEY%
+LOCAL CLUEZ%
+LOCAL HASH$(1)
+LOCAL LENGTHX%
+LOCAL LENGTHY%
+LOCAL GRIDSTART%
+LOCAL GRIDEND%
+LOCAL TOTALROWS%
+LOCAL I%
+LOCAL SOL$(255)
+LOCAL ANSWER$(160)
+LOCAL CLEAN$(160)
+LOCAL NUMSTR$(10)
+LOCAL SDIR$(1)
+LOCAL SOLMODE%
+LOCAL SOLPOS%
+LOCAL ROWNUM%
+LOCAL COLNUM%
+LOCAL P%
+LOCAL Q%
+LOCAL CH$(1)
+LOCAL CH%
+LOCAL NEWROW$(20)
+LOCAL P2%
+LOCAL BAS$(255)
+LOCAL FP%
+LOCAL DEL$(1)
+
+CLUE$=""
+REF$=""
+HASH$="#"
+Z%=1
+X%=1
+NEWB$(Z%)=""
+REFX%=1
+CLUEY%=1
+CLUEZ%=0
+
+REM Select the Guardian crossword from D:\Crosswords\Text files
+REM Native Series 5 file selector: browse File, Folder and Disk.
+fName$="D:\Crosswords\Text files\*.txt"
+dINIT "Select Guardian crossword"
+dFILE fName$,"File,Folder,Disk",128
+IF DIALOG=0
+    RETURN
+ENDIF
+CLS
+
+mode%= $0400 OR $0020
+ret%=IOOPEN(handle%,fName$,mode%)
+IF ret%<0
+    showErr:(ret%)
+    RETURN
+ENDIF
+
+address%=ADDR(txt$)
+
+WHILE 1
+    k%=KEY
+    IF k%
+        IF k%=27
+            IOCLOSE(handle%)
+            RETURN
+        ELSEIF GET=27
+            IOCLOSE(handle%)
+            RETURN
+        ENDIF
+    ENDIF
+
+    ret%=IOREAD(handle%,address%+1,255)
+
+    IF ret%<0
+        IF ret%<>-36
+            showErr:(ret%)
+        ENDIF
+        BREAK
+    ELSE
+        POKEB address%,ret%
+        ROW$(X%)=txt$
+        X%=X%+1
+        Z%=Z%+1
+    ENDIF
+ENDWH
+
+ret%=IOCLOSE(handle%)
+IF ret%
+    showErr:(ret%)
+    RETURN
+ENDIF
+
+REM Find the Guardian Line 1: ... Line n: block
+TOTALROWS%=Z%-1
+GRIDSTART%=0
+GRIDEND%=0
+I%=1
+
+WHILE I%<TOTALROWS%+1
+    IF LEFT$(ROW$(I%),4)="Line"
+        IF GRIDSTART%=0
+            GRIDSTART%=I%
+        ENDIF
+        GRIDEND%=I%
+    ELSEIF GRIDSTART%>0
+        BREAK
+    ENDIF
+    I%=I%+1
+ENDWH
+
+IF GRIDSTART%=0
+    PRINT "NO GUARDIAN GRID FOUND"
+    GET
+    RETURN
+ENDIF
+
+CLUEZ%=GRIDEND%-GRIDSTART%+1
+
+IF CLUEZ%>26
+    PRINT "GRID TOO LARGE"
+    GET
+    RETURN
+ENDIF
+
+LENGTHX%=CLUEZ%
+REF$=LEFT$("ABCDEFGHIJKLMNOPQRSTUVWXYZ",LENGTHX%)
+
+REM Copy grid rows and safely remove "Line n:"
+I%=1
+Z%=GRIDSTART%
+
+WHILE Z%<GRIDEND%+1
+    IF LEN(ROW$(Z%))<9
+        ROW$(I%)=""
+    ELSEIF MID$(ROW$(Z%),9,1)<>" "
+        ROW$(I%)=MID$(ROW$(Z%),9,255)
+    ELSE
+        ROW$(I%)=MID$(ROW$(Z%),10,255)
+    ENDIF
+    I%=I%+1
+    Z%=Z%+1
+ENDWH
+
+REM Convert Guardian coordinate rows into # and - grid
+LENGTHX%=LEN(REF$)
+Z%=1
+
+WHILE Z%<CLUEZ%+1
+    CLUEY%=1
+    REFX%=1
+    NEWB$(Z%)=""
+    CLUE$=ROW$(Z%)
+    LENGTHY%=LEN(CLUE$)
+
+    WHILE REFX%<LENGTHX%+1
+        MATRIX$=MID$(REF$,REFX%,1)
+
+        WHILE CLUEY%<LENGTHY%+1 AND MID$(CLUE$,CLUEY%,1)=" "
+            CLUEY%=CLUEY%+1
+        ENDWH
+
+        IF CLUEY%<=LENGTHY% AND MID$(CLUE$,CLUEY%,1)=MATRIX$
+            NEWB$(Z%)=NEWB$(Z%)+HASH$
+            CLUEY%=CLUEY%+1
+        ELSE
+            NEWB$(Z%)=NEWB$(Z%)+"-"
+        ENDIF
+
+        REFX%=REFX%+1
+    ENDWH
+
+    Z%=Z%+1
+ENDWH
+
+REM Start the filled grid as a copy of the blank grid
+Z%=1
+WHILE Z%<CLUEZ%+1
+    FILLED$(Z%)=NEWB$(Z%)
+    Z%=Z%+1
+ENDWH
+
+REM ------------------------------------------------------------
+REM Read Guardian solution tables and put answers into the grid.
+REM Guardian positions are coordinates such as (1A), (3K), etc.
+REM The solution section tells us whether the answer runs Across
+REM or Down. The coordinate is row number + column letter.
+REM ------------------------------------------------------------
+
+SOLMODE%=0
+Z%=GRIDEND%+1
+
+WHILE Z%<X%
+    IF ROW$(Z%)="Across solutions"
+        SOLMODE%=1
+    ELSEIF ROW$(Z%)="Down solutions"
+        SOLMODE%=2
+    ELSEIF LEFT$(ROW$(Z%),1)="(" AND SOLMODE%>0
+        SOL$=ROW$(Z%)
+
+        REM Find the column letter in the coordinate.
+        SOLPOS%=2
+        WHILE SOLPOS%<LEN(SOL$)+1 AND ASC(UPPER$(MID$(SOL$,SOLPOS%,1)))<65
+            SOLPOS%=SOLPOS%+1
+        ENDWH
+
+        IF SOLPOS%<LEN(SOL$)+1
+            NUMSTR$=MID$(SOL$,2,SOLPOS%-2)
+            SDIR$=UPPER$(MID$(SOL$,SOLPOS%,1))
+            ROWNUM%=VAL(NUMSTR$)
+            COLNUM%=ASC(SDIR$)-64
+
+            REM Answer starts after ") ".
+            ANSWER$=MID$(SOL$,SOLPOS%+3,80)
+            ANSWER$=UPPER$(ANSWER$)
+
+            REM Remove spaces, punctuation and enumeration from answer.
+            CLEAN$=""
+            P%=1
+            WHILE P%<LEN(ANSWER$)+1
+                CH$=MID$(ANSWER$,P%,1)
+                CH%=ASC(CH$)
+                IF CH%>=65 AND CH%<=90
+                    CLEAN$=CLEAN$+CH$
+                ENDIF
+                P%=P%+1
+            ENDWH
+
+            IF ROWNUM%>=1 AND ROWNUM%<=CLUEZ% AND COLNUM%>=1 AND COLNUM%<=LENGTHX%
+                IF SOLMODE%=1
+                    REM Across: write the answer along one row.
+                    NEWROW$=""
+                    P%=1
+                    WHILE P%<LENGTHX%+1
+                        IF P%>=COLNUM% AND P%<COLNUM%+LEN(CLEAN$)
+                            Q%=P%-COLNUM%+1
+                            NEWROW$=NEWROW$+MID$(CLEAN$,Q%,1)
+                        ELSE
+                            NEWROW$=NEWROW$+MID$(FILLED$(ROWNUM%),P%,1)
+                        ENDIF
+                        P%=P%+1
+                    ENDWH
+                    FILLED$(ROWNUM%)=NEWROW$
+                ELSE
+                    REM Down: write one letter in each successive row.
+                    P%=1
+                    WHILE P%<LEN(CLEAN$)+1 AND ROWNUM%+P%-1<=CLUEZ%
+                        Q%=ROWNUM%+P%-1
+                        NEWROW$=""
+                        P2%=1
+                        WHILE P2%<LENGTHX%+1
+                            IF P2%=COLNUM%
+                                NEWROW$=NEWROW$+MID$(CLEAN$,P%,1)
+                            ELSE
+                                NEWROW$=NEWROW$+MID$(FILLED$(Q%),P2%,1)
+                            ENDIF
+                            P2%=P2%+1
+                        ENDWH
+                        FILLED$(Q%)=NEWROW$
+                        P%=P%+1
+                    ENDWH
+                ENDIF
+            ENDIF
+        ENDIF
+    ENDIF
+
+    Z%=Z%+1
+ENDWH
+
+REM Build output filename from the input filename.
+FP%=LEN(fName$)
+WHILE FP%>0 AND MID$(fName$,FP%,1)<>"\"
+    FP%=FP%-1
+ENDWH
+BAS$=MID$(fName$,FP%+1,255)
+
+IF LEN(BAS$)>4 AND RIGHT$(BAS$,4)=".txt"
+    BAS$=LEFT$(BAS$,LEN(BAS$)-4)
+ENDIF
+
+File1$="D:\Crosswords\Text output\"+BAS$+"_converted.txt"
+LOPEN File1$
+
+LPRINT "<grid>"
+
+REM Write the completed grid
+Z%=1
+WHILE Z%<CLUEZ%+1
+    LPRINT FILLED$(Z%)
+    Z%=Z%+1
+ENDWH
+
+REM Write clues in RMR format
+REM The RMR input requires <across> and <down> tags.
+
+LPRINT "<across>"
+
+Z%=GRIDEND%+1
+WHILE Z%<X%
+    IF ROW$(Z%)="Down"
+        BREAK
+    ENDIF
+    IF ROW$(Z%)<>"Across" AND LEN(ROW$(Z%))>0
+        IF ROW$(Z%)<>"Solutions" AND ROW$(Z%)<>"Across solutions"
+            LPRINT ROW$(Z%)
+        ENDIF
+    ENDIF
+    Z%=Z%+1
+ENDWH
+
+LPRINT "<down>"
+
+WHILE Z%<X%
+    IF ROW$(Z%)="Solutions"
+        BREAK
+    ENDIF
+    IF ROW$(Z%)<>"Down" AND LEN(ROW$(Z%))>0
+        LPRINT ROW$(Z%)
+    ENDIF
+    Z%=Z%+1
+ENDWH
+
+LCLOSE
+
+PRINT "SAVED FILE"
+PRINT File1$
+PRINT ""
+PRINT "Delete original file?"
+PRINT "Y = Yes   N = No"
+DEL$=GET$
+IF UPPER$(DEL$)="Y"
+    DELETE fName$
+    PRINT "Original deleted."
+ELSE
+    PRINT "Original kept."
+ENDIF
+BEEP 2,250
+PAUSE 60
+
+ENDP
+
+PROC showErr:(val%)
+PRINT "Error",val%,err$(val%)
+GET
+ENDP
