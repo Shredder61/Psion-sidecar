@@ -1028,7 +1028,7 @@ Runtime: {html.escape(runtimes)}
 <h3>Useful hyperlinks</h3>
 <ol>
 <li><a href="http://68k.news/">68k.news</a> - news headlines for vintage computers</li>
-<li><a href="http://frogfind.com/">FrogFind</a> - web search, pages simplified</li>
+<li><a href="http://frogfind.de/">FrogFind</a> - web search, pages simplified</li>
 <li><a href="https://lite.duckduckgo.com/lite/">DuckDuckGo Lite</a> - search</li>
 <li><a href="https://text.npr.org/">NPR text</a> and <a href="https://lite.cnn.com/">CNN lite</a></li>
 <li><a href="https://en.m.wikipedia.org/">Wikipedia</a> (mobile pages)</li>
