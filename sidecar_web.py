@@ -11,8 +11,7 @@ import json
 HOST = "0.0.0.0"
 PORT = 8081
 
-BASE_DIR = Path(__file__).resolve().parent
-ROOT = BASE_DIR / "crosswords"
+ROOT = Path("/home/inkypikitch/guardian-migration/crosswords")
 
 
 class SidecarHandler(SimpleHTTPRequestHandler):
@@ -117,7 +116,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
     def handle_psionsoftware(self, query):
         try:
             with open(
-                BASE_DIR / "epoc32_index.json",
+                "/home/inkypikitch/guardian-migration/epoc32_index.json",
                 "r",
                 encoding="utf-8"
             ) as f:
@@ -255,7 +254,7 @@ Filter:
 
         try:
             with open(
-                BASE_DIR / "software_index.json",
+                "/home/inkypikitch/guardian-migration/software_index.json",
                 "r",
                 encoding="utf-8"
             ) as f:
@@ -608,7 +607,7 @@ Runtime: {html.escape(runtimes)}
         try:
 
             with open(
-                BASE_DIR / "software_index.json",
+                "/home/inkypikitch/guardian-migration/software_index.json",
                 "r",
                 encoding="utf-8"
             ) as f:
@@ -966,14 +965,24 @@ Runtime: {html.escape(runtimes)}
         sys.path.insert(0, str(ROOT.parent))
 
         try:
-            from guardian_pi import get_latest_number
+            from guardian_pi import (
+                get_latest_number,
+                QUICK_MIN, QUICK_MAX,
+                CRYPTIC_MIN, CRYPTIC_MAX,
+            )
 
             latest_quick = get_latest_number("quick")
             latest_cryptic = get_latest_number("cryptic")
 
         except Exception:
+            # Fall back to the archive ranges stored in guardian_pi.py
+            QUICK_MIN, QUICK_MAX = 9093, 17583
+            CRYPTIC_MIN, CRYPTIC_MAX = 21620, 30109
             latest_quick = None
             latest_cryptic = None
+
+        quick_high = latest_quick or QUICK_MAX
+        cryptic_high = latest_cryptic or CRYPTIC_MAX
 
         quick_files = sorted(
             ROOT.glob("Quick_*.txt"),
@@ -1101,7 +1110,7 @@ Runtime: {html.escape(runtimes)}
 <form action="/request" method="get">
 
 <p>
-Quick number:
+Quick number (range: {QUICK_MIN}-{quick_high}):<br>
 <input type="hidden" name="kind" value="quick">
 <input type="text" name="number" size="8">
 <input type="submit" value="GET">
@@ -1112,7 +1121,7 @@ Quick number:
 <form action="/request" method="get">
 
 <p>
-Cryptic number:
+Cryptic number (range: {CRYPTIC_MIN}-{cryptic_high}):<br>
 <input type="hidden" name="kind" value="cryptic">
 <input type="text" name="number" size="8">
 <input type="submit" value="GET">
