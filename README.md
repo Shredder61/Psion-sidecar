@@ -1,10 +1,10 @@
 # Psion Sidecar
 
-Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads, access to locally stored crossword files, Psion Community software browsing and a Psion-friendly search page. The 'back-office' code is working well, but the homepage display will receive further updates as I develop the content.
+Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads (native or RMR / FatCatz format), access to your locally stored crossword files, Psion Community software browsing and a Psion-friendly search page. 
 
 The Sidecar can be accessed from a Psion using a compatible browser such as Opera or PsiWeb. The Raspberry Pi provides the web server and connects to the external services used by the project.
 
-The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. The resulting text files can then be transferred to the Psion and converted using a separate OPL program.
+The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. The resulting text files can then be transferred to the Psion and converted using a separate OPL program, crossword_converter_v01.txt (OPL).
 
 Thank you to Kian (https://www.kianryan.co.uk) and Daniel (https://github.com/danieledge) who created the impetus (connectivity) to get rolling with this after my two 'mint' Psions (one special anniversary 5 (green) and a 5mx) had been in the closet for a decade or so.
 
@@ -15,7 +15,7 @@ Thank you to Kian (https://www.kianryan.co.uk) and Daniel (https://github.com/da
 - A Psion Community software catalogue interface, including filtered program searches and download links.
 - A FrogFind search page accessible through the Sidecar.
 - An example systemd service for starting the server automatically when the Raspberry Pi boots.
-- A separate Psion-side OPL conversion workflow for preparing crossword text for compatible crossword applications.
+- A separate Psion-side OPL conversion workflow (if needed) for preparing crossword text for compatible crossword applications.
 
 The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar web server uses Python's standard library and does not require third-party Python packages.
 
@@ -25,20 +25,16 @@ A Raspberry Pi is required to host the browser-based Sidecar, but it is not nece
 
 This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible.
 
-The standalone downloader and browser-based Sidecar are not yet fully aligned, although the intention is to make their interfaces more consistent over time.
-
-The homepage will continue to evolve. Integrating the OPL conversion process more closely into crossword retrieval is a planned improvement.
+The homepage will continue to evolve.
 
 ## Guardian Quick and Cryptic crossword downloads
 
 There are two ways to download Guardian Quick and Cryptic crosswords for use on the Psion:
 
-- **Standalone downloader:** run `guardian_pi.py` directly on a PC or Raspberry Pi.
-- **Sidecar downloader:** request downloads through the web interface hosted on a Raspberry Pi, including from a compatible browser on the Psion itself.
+- **Standalone downloader:** run `guardian_pi.py` directly on a PC or Raspberry Pi which creates a text file that you need to convert on the Psion using crosswords_converter.txt(OPL).
+- **Sidecar downloader:** request downloads through the web interface hosted on a Raspberry Pi, including from a compatible browser on the Psion itself, and you will be presented with native and RMR / FatCatz downloads.
 
-I recommend starting with the standalone downloader to understand the download process before using the Sidecar.
-
-Both methods produce a text file that must be converted on the Psion using the appropriate OPL converter before it can be opened in a compatible RMR or FatCatz crossword program. I now have a Py version also which will automate the conversion (to be uploaded shortly).
+I recommend starting with the standalone downloader to understand the download process before using the Sidecar, but the Sidecar is the optimised workflow.
 
 ## Guardian crossword standalone downloader: `guardian_pi.py`
 
@@ -50,7 +46,7 @@ Menu options:
 
 Ranges currently displayed in the code are Quick 9093–17583 and Cryptic 21620–30109, based on the archive limits recorded in the source. The “today's crossword” option checks the Guardian for the latest number, so those fixed limits may need updating as the archive grows.
 
-The downloader retrieves the Guardian's accessible, text-based crossword page and saves the puzzle in the text format expected by the Psion OPL converter.
+The downloader retrieves the Guardian's accessible, text-based crossword page and presents the puzzle in native or RMR / FatCatz format.
 
 Before downloading, the program checks whether the crossword is already available locally and whether it is present in the Guardian's own archive. If a download is appropriate, it retrieves the puzzle and saves the resulting text file in the output directory.
 
@@ -87,7 +83,9 @@ The homepage also provides access to locally stored crossword files, including p
 
 ## Importing Guardian crosswords into RMS / FatCatz Crossword
 
-The initial download will be a text file and needs to be converted using the Crossword converter_v01.opl program (Crossword converter_v01.txt is imported into the OPL program and gets stored as .opl. Run the .opl program and, using its file browser, open the downloaded Guardian crossword file. The file will be converted. You will be given the option to delete the downloaded Guardian crossword after conversion which is what I recommend. Now open the RMR / FatCatz Crossword program and select File-Open and search for the converted Guardian crossword (has a suffix - converted). Open the file (again, select delete original input file), and the converted file will load into the crossword. The process is the same whether you run the guardian_pi.py in Python or run its procedures via the Sidecar. 
+The download is a native text file (needs to be converted using the Crossword converter_v01.opl program) or an RMR / FatCatz formatted file (no conversion necessary).
+
+If using the crossword_converter_v01.txt - import into the OPL program and save as .opl. Run the .opl program and, using its file browser, open the downloaded Guardian crossword file. The file will be converted. You will be given the option to delete the downloaded Guardian crossword after conversion which is what I recommend. Now open the RMR / FatCatz Crossword program and select File-Open and search for the converted Guardian crossword (has a suffix - converted). Open the file (again, select delete original input file), and the converted file will load into the crossword. The process is the same whether you run the guardian_pi.py in Python or run its procedures via the Sidecar. 
 
 ## Psion Community software Sidecar downloader
 
