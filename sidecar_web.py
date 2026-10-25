@@ -3,7 +3,8 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import html
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
+import re
 from urllib.request import Request, urlopen
 import json
 
@@ -11,7 +12,8 @@ import json
 HOST = "0.0.0.0"
 PORT = 8081
 
-ROOT = Path(__file__).resolve().parent / "crosswords"
+ROOT = Path("/home/inkypikitch/guardian-migration/crosswords")
+
 
 class SidecarHandler(SimpleHTTPRequestHandler):
 
@@ -26,6 +28,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             self.send_guardian_crossword()
         elif path == "/request":
             self.handle_request(query)
+        elif path == "/rmr":
+            self.handle_rmr(query)
         elif path == "/frogfind":
             self.handle_frogfind(query)
         elif path == "/psionsoftware":
@@ -833,6 +837,47 @@ Runtime: {html.escape(runtimes)}
 
             self.wfile.write(data)
 
+    def handle_rmr(self, query):
+        """Convert a Guardian crossword to RMR format and serve it."""
+        import re
+
+        filename = query.get("file", [""])[0].strip()
+        if not re.fullmatch(r"(?:Quick|Cryptic)_\d+\.txt", filename):
+            self.send_error(400, "Invalid crossword filename")
+            return
+
+        source_path = ROOT / filename
+        if not source_path.is_file():
+            self.send_error(404, "Original crossword not found")
+            return
+
+        output_path = ROOT / (source_path.stem + "_converted.txt")
+
+        try:
+            if (
+                not output_path.exists()
+                or output_path.stat().st_mtime < source_path.stat().st_mtime
+            ):
+                import sys
+                sys.path.insert(0, str(ROOT.parent))
+                from crossword_converter import convert_text
+
+                source = source_path.read_text(
+                    encoding="utf-8", errors="replace"
+                )
+                converted = convert_text(source)
+                output_path.write_text(
+                    converted, encoding="utf-8", newline="\r\n"
+                )
+        except Exception as exc:
+            self.send_error(422, "RMR conversion failed: " + str(exc))
+            return
+
+        self.send_response(302)
+        self.send_header("Location", "/" + quote(output_path.name))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+
     def handle_request(self, query):
         import sys
 
@@ -899,18 +944,19 @@ Runtime: {html.escape(runtimes)}
                 "<body>"
                 "<h1>Request complete</h1>"
                 "<p>%s</p>"
-                "<p><a href='/%s'>Save crossword</a></p>"
+                "<p><a href='/%s'>Save original crossword</a></p>"
+                "<p><a href='/rmr?file=%s'>Download RMR version</a></p>"
                 "<hr>"
                 "<h2>GET ANOTHER CROSSWORD</h2>"
                 "<form action='/request' method='get'>"
-                "<p>Quick number: "
+                "<p>Quick number (9093-17583): "
                 "<input type='hidden' name='kind' value='quick'>"
                 "<input type='text' name='number' size='8'>"
                 "<input type='submit' value='GET'>"
                 "</p>"
                 "</form>"
                 "<form action='/request' method='get'>"
-                "<p>Cryptic number: "
+                "<p>Cryptic number (21620-30109): "
                 "<input type='hidden' name='kind' value='cryptic'>"
                 "<input type='text' name='number' size='8'>"
                 "<input type='submit' value='GET'>"
@@ -919,6 +965,7 @@ Runtime: {html.escape(runtimes)}
                 "</body></html>"
             ) % (
                 html.escape(status_text),
+                html.escape(filename),
                 html.escape(filename)
             )
 
@@ -1042,8 +1089,9 @@ Runtime: {html.escape(runtimes)}
             name = html.escape(filename.name)
 
             return (
-                f'<li><a href="/{name}">'
-                f'{name}</a></li>'
+                f'<li>{name} — '
+                f'<a href="/{name}">Original</a> | '
+                f'<a href="/rmr?file={name}">RMR version</a></li>'
             )
 
         rows = []
