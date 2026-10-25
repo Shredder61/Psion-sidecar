@@ -38,7 +38,7 @@ There are two ways to download Guardian Quick and Cryptic crosswords for use on 
 
 I recommend starting with the standalone downloader to understand the download process before using the Sidecar.
 
-Both methods produce a text file that must be converted on the Psion using the appropriate OPL converter before it can be opened in a compatible RMR or FatCatz crossword program.
+Both methods produce a text file that must be converted on the Psion using the appropriate OPL converter before it can be opened in a compatible RMR or FatCatz crossword program. I now have a Py version also which will automate the conversion (to be uploaded shortly).
 
 ## Guardian crossword standalone downloader: `guardian_pi.py`
 
