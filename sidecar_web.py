@@ -23,6 +23,8 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
         if path == "/" or path == "/refresh":
             self.send_homepage()
+        elif path == "/guardian-crossword":
+            self.send_guardian_crossword()
         elif path == "/request":
             self.handle_request(query)
         elif path == "/frogfind":
@@ -960,6 +962,48 @@ Runtime: {html.escape(runtimes)}
 
 
     def send_homepage(self):
+        page = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Psion Sidecar</title>
+</head>
+<body>
+
+<h1>PSION HOME</h1>
+
+<hr>
+
+<h2>RESOURCES</h2>
+
+<p><a href="/psionsoftware">Psion Community Software</a></p>
+
+<ul>
+<li><a href="http://68k.news/">68k.news</a> - news headlines for vintage computers</li>
+<li><a href="http://frogfind.com/">FrogFind</a> - web search, pages simplified</li>
+<li><a href="https://lite.duckduckgo.com/lite/">DuckDuckGo Lite</a> - search</li>
+<li><a href="https://text.npr.org/">NPR text</a> and <a href="https://lite.cnn.com/">CNN lite</a></li>
+<li><a href="https://en.m.wikipedia.org/">Wikipedia</a> (mobile pages)</li>
+<li><a href="https://wiby.me/">wiby.me</a> - a search engine for simple pages</li>
+<li><a href="/guardian-crossword">Download The Guardian crossword</a></li>
+</ul>
+
+<hr>
+
+<p><strong>Psion Sidecar</strong><br>Shredder61 - 2026</p>
+
+</body>
+</html>
+"""
+        data = page.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def send_guardian_crossword(self):
         import sys
 
         sys.path.insert(0, str(ROOT.parent))
@@ -1053,6 +1097,7 @@ Runtime: {html.escape(runtimes)}
         rows.append("<h2>ARCHIVE</h2>")
 
         rows.append("<h3>QUICK</h3>")
+        rows.append("<ul>")
 
         for f in reversed(quick_files):
 
@@ -1063,7 +1108,9 @@ Runtime: {html.escape(runtimes)}
 
             rows.append(link_for(f))
 
+        rows.append("</ul>")
         rows.append("<h3>CRYPTIC</h3>")
+        rows.append("<ul>")
 
         for f in reversed(cryptic_files):
 
@@ -1074,6 +1121,8 @@ Runtime: {html.escape(runtimes)}
 
             rows.append(link_for(f))
 
+        rows.append("</ul>")
+
         page = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -1083,19 +1132,9 @@ Runtime: {html.escape(runtimes)}
 
 <body>
 
-<h1>PSION HOME</h1>
+<h1>THE GUARDIAN CROSSWORDS</h1>
 
-<hr>
-
-<h2>RESOURCES</h2>
-
-<p>
-<a href="/psionsoftware">Psion Community Software</a>
-</p>
-
-<p>
-<a href="/frogfind">FrogFind web browser</a>
-</p>
+<p><a href="/">BACK TO PSION HOME</a></p>
 
 <hr>
 
@@ -1134,6 +1173,8 @@ Cryptic number (range: {CRYPTIC_MIN}-{cryptic_high}):<br>
 {chr(10).join(rows)}
 
 <hr>
+
+<p><a href="/">BACK TO PSION HOME</a></p>
 
 <p>
 <strong>Psion Sidecar</strong><br>
