@@ -13,7 +13,6 @@ PORT = 8081
 
 ROOT = Path(__file__).resolve().parent / "crosswords"
 
-
 class SidecarHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
@@ -977,16 +976,17 @@ Runtime: {html.escape(runtimes)}
 <h2>RESOURCES</h2>
 
 <p><a href="/psionsoftware">Psion Community Software</a></p>
+<p><a href="/guardian-crossword">Download The Guardian crossword</a></p>
 
-<ul>
+<h3>Useful hyperlinks</h3>
+<ol>
 <li><a href="http://68k.news/">68k.news</a> - news headlines for vintage computers</li>
 <li><a href="http://frogfind.com/">FrogFind</a> - web search, pages simplified</li>
 <li><a href="https://lite.duckduckgo.com/lite/">DuckDuckGo Lite</a> - search</li>
 <li><a href="https://text.npr.org/">NPR text</a> and <a href="https://lite.cnn.com/">CNN lite</a></li>
 <li><a href="https://en.m.wikipedia.org/">Wikipedia</a> (mobile pages)</li>
 <li><a href="https://wiby.me/">wiby.me</a> - a search engine for simple pages</li>
-<li><a href="/guardian-crossword">Download The Guardian crossword</a></li>
-</ul>
+</ol>
 
 <hr>
 
