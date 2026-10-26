@@ -14,7 +14,6 @@ PORT = 8081
 
 ROOT = Path(__file__).resolve().parent / "crosswords"
 
-
 class SidecarHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
@@ -120,42 +119,37 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
     def handle_psionsoftware(self, query):
         try:
-            with open(
-                "/home/inkypikitch/guardian-migration/epoc32_index.json",
-                "r",
-                encoding="utf-8"
-            ) as f:
-                epoc32 = json.load(f)
+            platform = query.get("platform", ["epoc32"])[0].strip().lower()
+
+            if platform not in ("epoc16", "epoc32"):
+                platform = "epoc32"
+
+            index_file = (
+                "/home/inkypikitch/guardian-migration/"
+                + platform
+                + "_index.json"
+            )
+
+            with open(index_file, "r", encoding="utf-8") as f:
+                programs = json.load(f)
 
             filter_text = query.get("q", [""])[0].strip().lower()
 
             if filter_text:
-                filtered = []
+                programs = [
+                    program for program in programs
+                    if filter_text in program.get("name", "").lower()
+                ]
 
-                for program in epoc32:
-                    name = program.get("name", "")
-
-                    if filter_text in name.lower():
-                        filtered.append(program)
-
-                epoc32 = filtered
-
-            epoc32.sort(
-                key=lambda program: program.get(
-                    "name", ""
-                ).lower()
+            programs.sort(
+                key=lambda program: program.get("name", "").lower()
             )
 
             rows = []
 
-            for program in epoc32:
-                name = html.escape(
-                    program.get("name", "")
-                )
-
-                program_id = html.escape(
-                    program.get("id", "")
-                )
+            for program in programs:
+                name = html.escape(program.get("name", ""))
+                program_id = html.escape(str(program.get("id", "")))
 
                 rows.append(
                     '<p><a href="/psionprogram?id='
@@ -168,6 +162,9 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if not rows:
                 rows.append("<p>No programs found.</p>")
 
+            epoc16_selected = " selected" if platform == "epoc16" else ""
+            epoc32_selected = " selected" if platform == "epoc32" else ""
+
             page = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -178,14 +175,19 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
 <h1>PSION SOFTWARE</h1>
 
-<h2>EPOC32 PROGRAMS</h2>
-
 <form action="/psionsoftware" method="get">
+<p>
+Platform:
+<select name="platform">
+<option value="epoc16"{epoc16_selected}>EPOC16 (Series 3)</option>
+<option value="epoc32"{epoc32_selected}>EPOC32 (Series 5/5mx)</option>
+</select>
+</p>
 <p>
 Filter:
 <input type="text"
        name="q"
-       value="{html.escape(filter_text)}"
+       value="{html.escape(filter_text, quote=True)}"
        size="20">
 <input type="submit" value="FILTER">
 </p>
@@ -193,7 +195,7 @@ Filter:
 
 <hr>
 
-<p>{len(epoc32)} programs</p>
+<p>{len(programs)} programs</p>
 
 {chr(10).join(rows)}
 
@@ -226,10 +228,12 @@ Filter:
             self.wfile.write(data)
 
         except Exception as e:
+            print("Psion Software error:", repr(e))
+
             message = (
                 "<html><body>"
                 "<h1>Psion Software error</h1>"
-                "<p>Could not contact the Psion Software Index.</p>"
+                "<p>Could not load the Psion Software Index.</p>"
                 "<p><a href='/'>Back to Sidecar</a></p>"
                 "</body></html>"
             )
@@ -320,41 +324,104 @@ Filter:
                             )
 
                         download_url = None
+                        package_url = None
+                        zip_references = []
+
+                        archive_extensions = (
+                            ".zip", ".iso", ".tar", ".7z", ".rar"
+                        )
 
                         if item.get("kind") in (
                             "installer",
                             "standalone"
                         ):
-
-                            for reference in item.get(
-                                "reference", []
-                            ):
-
-                                reference_url = (
-                                    reference.get("url")
-                                )
+                            for reference in item.get("references", item.get("reference", [])):
+                                reference_url = reference.get("url")
 
                                 if not reference_url:
                                     continue
 
-                                parsed_url = urlparse(
+                                reference_path = urlparse(
                                     reference_url
+                                ).path.lower()
+
+                                path_parts = reference_path.split("/")
+
+                                has_archive_parent = any(
+                                    part.endswith(archive_extensions)
+                                    for part in path_parts[:-1]
                                 )
 
-                                if (
-                                    parsed_url.path
-                                    .lower()
-                                    .endswith((
-                                        ".sis",
-                                        ".app",
-                                        ".opa"
-                                    ))
-                                ):
+                                # Archive.org can serve individual files
+                                # from inside an ISO using nested-file URLs.
+                                archive_host = (
+                                    urlparse(reference_url).hostname or ""
+                                ).lower()
 
-                                    download_url = (
-                                        reference_url
+                                archive_org_nested_file = (
+                                    has_archive_parent
+                                    and (
+                                        archive_host == "archive.org"
+                                        or archive_host.endswith(".archive.org")
                                     )
-                                    break
+                                    and any(
+                                        part.lower().endswith((".zip", ".iso"))
+                                        for part in path_parts[:-1]
+                                    )
+                                )
+
+                                # Offer direct SIS, APP and OPA references,
+                                # including individual files inside verified
+                                # Archive.org ZIP/ISO collections.
+                                if reference_path.endswith(".sis"):
+                                    if (
+                                        not has_archive_parent
+                                        or archive_org_nested_file
+                                    ):
+                                        download_url = reference_url
+                                        break
+
+                                if reference_path.endswith((".app", ".opa")):
+                                    if (
+                                        not has_archive_parent
+                                        or archive_org_nested_file
+                                    ):
+                                        download_url = reference_url
+                                        break
+
+                                # Prefer individually referenced ZIPs nested
+                                # inside Archive.org collections. The catalogue
+                                # associates the package with this programme,
+                                # so its filename need not match the APP/OPA.
+                                archive_org_nested_zip = (
+                                    has_archive_parent
+                                    and (
+                                        archive_host == "archive.org"
+                                        or archive_host.endswith(".archive.org")
+                                    )
+                                    and any(
+                                        part.lower().endswith((".zip", ".iso"))
+                                        for part in path_parts[:-1]
+                                    )
+                                )
+
+                                if reference_path.endswith(".zip"):
+                                    if archive_org_nested_zip:
+                                        zip_references.insert(0, reference_url)
+                                    elif not has_archive_parent:
+                                        programme_token = (
+                                            filename.rsplit(".", 1)[0].lower()
+                                        )
+                                        archive_name = path_parts[-1].lower()
+
+                                        if (
+                                            programme_token
+                                            and programme_token in archive_name
+                                        ):
+                                            zip_references.append(reference_url)
+
+                            if zip_references:
+                                package_url = zip_references[0]
 
 
                         candidate = {
@@ -363,7 +430,8 @@ Filter:
                             "size": size,
                             "sha256": sha256,
                             "kind": item.get("kind", ""),
-                            "download_url": download_url
+                            "download_url": download_url,
+                            "package_url": package_url
                         }
 
                         existing = unique_files.get(key)
@@ -391,6 +459,12 @@ Filter:
                                 )
                             ):
                                 unique_files[key] = candidate
+
+                            elif (
+                                candidate["package_url"]
+                                and not existing["package_url"]
+                            ):
+                                existing["package_url"] = candidate["package_url"]
 
             rows = []
 
@@ -421,18 +495,49 @@ Filter:
                         item["kind"]
                     )
 
+
+                if item.get("package_url") and not item.get("download_url"):
+                    display_filename = (
+                        filename.rsplit(".", 1)[0]
+                        + " — COMPLETE PACKAGE (.ZIP)"
+                    )
+                    display_kind = "Package download only"
+                    display_size = ""
+                else:
+                    display_filename = filename
+                    display_kind = kind
+                    display_size = size_text
+
                 rows.append(
                     "<p>"
                     + "<strong>"
-                    + filename
+                    + html.escape(display_filename)
                     + "</strong><br>"
                     + "Version: "
-                    + version_number
+                    + html.escape(version_number)
                     + "<br>"
-                    + kind
-                    + "<br>"
-                    + size_text
+                    + html.escape(display_kind)
+                    + (
+                        "<br>" + html.escape(display_size)
+                        if display_size
+                        else ""
+                    )
                 )
+
+
+                if item.get("package_url"):
+                    package_href = (
+                        "/psiondownload/PACKAGE.ZIP?id="
+                        + quote(program_id, safe="")
+                        + "&h="
+                        + quote(item["sha256"][:8], safe="")
+                    )
+
+                    rows.append(
+                        '<br><a href="'
+                        + html.escape(package_href, quote=True)
+                        + '">DOWNLOAD COMPLETE PACKAGE (.ZIP) PREFERRED</a>'
+                    )
 
                 if item["download_url"]:
 
@@ -455,7 +560,18 @@ Filter:
                             download_href,
                             quote=True
                         )
-                        + '">DOWNLOAD</a>'
+
+                        + '">'
+                        + (
+                            "DOWNLOAD INDIVIDUAL FILE (.OPA/.APP) "
+                            "[NOTE, .ZIP IS PREFERABLE]"
+                            if item["filename"].lower().endswith((".opa", ".app"))
+                            else "DOWNLOAD SIS INSTALLER"
+                            if item["filename"].lower().endswith(".sis")
+                            else "DOWNLOAD INDIVIDUAL FILE"
+                        )
+                        + '</a>'
+
                     )
 
                     original_filename = item["filename"].lower()
@@ -633,102 +749,188 @@ Runtime: {html.escape(runtimes)}
                 )
                 return
 
+            is_package = (
+                parsed.path.lower().endswith("/package.zip")
+            )
+
             download_url = None
             filename = None
+            output_filename = None
 
             candidates = []
 
-            for version in program.get(
-                "versions",
-                []
-            ):
+            archive_extensions = (
+                ".zip", ".iso", ".tar", ".7z", ".rar"
+            )
 
-                for variant in version.get(
-                    "variants",
-                    []
-                ):
+            for version in program.get("versions", []):
+                for variant in version.get("variants", []):
+                    for item in variant.get("items", []):
+                        item_hash = item.get("sha256", "")
 
-                    for item in variant.get(
-                        "items",
-                        []
-                    ):
-
-                        item_hash = item.get(
-                            "sha256",
-                            ""
-                        )
-
-                        if not item_hash:
+                        if not item_hash or not item_hash.startswith(hash_prefix):
                             continue
 
-                        if not item_hash.startswith(
-                            hash_prefix
-                        ):
+                        if item.get("kind") not in ("installer", "standalone"):
                             continue
 
-                        if item.get("kind") not in (
-                            "installer",
-                            "standalone"
-                        ):
-                            continue
+                        item_filename = item.get("filename", "")
 
-                        item_filename = item.get(
-                            "filename",
-                            ""
-                        )
+                        references = item.get("references", item.get("reference", []))
 
-                        item_download_url = None
-
-                        for reference in item.get(
-                            "reference",
-                            []
-                        ):
-
-                            reference_url = reference.get(
-                                "url"
+                        if is_package:
+                            # Never use a package link for an item with
+                            # an SIS installer reference.
+                            has_sis = any(
+                                ref.get("url")
+                                and urlparse(ref["url"]).path.lower().endswith(".sis")
+                                for ref in references
                             )
+
+                            if has_sis:
+                                continue
+
+                            programme_token = (
+                                item_filename.rsplit(".", 1)[0].lower()
+                            )
+
+                            for reference in references:
+                                reference_url = reference.get("url")
+
+                                if not reference_url:
+                                    continue
+
+                                reference_path = urlparse(
+                                    reference_url
+                                ).path
+
+                                if not reference_path.lower().endswith(".zip"):
+                                    continue
+
+                                path_parts = reference_path.split("/")
+
+                                has_archive_parent = any(
+                                    part.lower().endswith(archive_extensions)
+                                    for part in path_parts[:-1]
+                                )
+
+                                archive_host = (
+                                    urlparse(reference_url).hostname or ""
+                                ).lower()
+
+                                archive_org_nested_zip = (
+                                    has_archive_parent
+                                    and (
+                                        archive_host == "archive.org"
+                                        or archive_host.endswith(".archive.org")
+                                    )
+                                    and any(
+                                        part.lower().endswith((".zip", ".iso"))
+                                        for part in path_parts[:-1]
+                                    )
+                                )
+
+                                if has_archive_parent and not archive_org_nested_zip:
+                                    continue
+
+                                archive_name = path_parts[-1].lower()
+
+                                # Nested Archive.org ZIP references are
+                                # associated with the programme by the
+                                # catalogue, even if filenames differ.
+                                # Keep filename matching for direct ZIPs.
+                                if not archive_org_nested_zip:
+                                    if (
+                                        not programme_token
+                                        or programme_token not in archive_name
+                                    ):
+                                        continue
+
+                                download_url = reference_url
+
+                                filename = (
+                                    reference.get("name", "")
+                                    or path_parts[-1]
+                                ).replace("\\", "/").rsplit("/", 1)[-1]
+
+                                output_filename = filename
+                                break
+
+                            if download_url:
+                                break
+
+                            continue
+
+                        # Installer downloads: SIS can be inside a parent
+                        # archive; APP/OPA must have a direct reference.
+                        for reference in references:
+                            reference_url = reference.get("url")
 
                             if not reference_url:
                                 continue
 
-                            if urlparse(
+                            reference_path = urlparse(
                                 reference_url
-                            ).path.lower().endswith(
-                                (
-                                    ".sis",
-                                    ".app",
-                                    ".opa"
-                                )
-                            ):
+                            ).path
 
-                                item_download_url = (
-                                    reference_url
-                                )
-                                break
+                            lower_path = reference_path.lower()
 
-                        if item_download_url:
-                            candidates.append(
-                                (
-                                    item_filename,
-                                    item_download_url
+                            if not lower_path.endswith((".sis", ".app", ".opa")):
+                                continue
+
+                            path_parts = reference_path.split("/")
+
+                            has_archive_parent = any(
+                                part.lower().endswith(archive_extensions)
+                                for part in path_parts[:-1]
+                            )
+
+                            # Archive.org can serve individual files from
+                            # inside ZIP/ISO collections via nested-file URLs.
+                            archive_host = (
+                                urlparse(reference_url).hostname or ""
+                            ).lower()
+
+                            archive_org_nested_file = (
+                                has_archive_parent
+                                and (
+                                    archive_host == "archive.org"
+                                    or archive_host.endswith(".archive.org")
+                                )
+                                and any(
+                                    part.lower().endswith((".zip", ".iso"))
+                                    for part in path_parts[:-1]
                                 )
                             )
 
-            for candidate_filename, candidate_url in candidates:
+                            # Permit standalone installers, including files
+                            # individually referenced inside Archive.org
+                            # ZIP/ISO collections.
+                            if (
+                                has_archive_parent
+                                and not archive_org_nested_file
+                            ):
+                                continue
 
-                if candidate_filename.lower() not in (
-                    "",
-                    "chess.sis"
-                ):
+                            candidate_filename = (
+                                reference.get("name", "")
+                                or item_filename
+                                or path_parts[-1]
+                            ).replace("\\", "/").rsplit("/", 1)[-1]
 
-                    filename = candidate_filename
-                    download_url = candidate_url
-                    break
+                            candidates.append(
+                                (candidate_filename, reference_url)
+                            )
 
-            if not download_url and candidates:
+            if not is_package and candidates:
+                # Prefer SIS installers over APP/OPA files.
+                candidates.sort(
+                    key=lambda candidate: (
+                        0 if candidate[0].lower().endswith(".sis") else 1
+                    )
+                )
 
-                filename = candidates[0][0]
-                download_url = candidates[0][1]
+                filename, download_url = candidates[0]
 
             if not download_url:
                 self.send_error(
@@ -737,7 +939,8 @@ Runtime: {html.escape(runtimes)}
                 )
                 return
 
-            output_filename = filename[:-4] + ".bin"
+            if not is_package:
+                output_filename = filename[:-4] + ".bin"
 
             print(
                 "Psion file download:",
@@ -805,9 +1008,11 @@ Runtime: {html.escape(runtimes)}
         except Exception as e:
 
             print(
-                "SIS download error:",
+                "Package download error:" if is_package
+                else "SIS download error:",
                 repr(e)
             )
+
 
             message = (
                 "<html><body>"
