@@ -19,13 +19,12 @@ From the repository root, run:
 
 ```bash
 sudo mkdir -p /opt/psion-sidecar
-sudo cp sidecar_web.py guardian_pi.py epoc32_index.json software_index.json /opt/psion-sidecar/
+sudo cp sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json /opt/psion-sidecar/
 sudo mkdir -p /opt/psion-sidecar/crosswords
 sudo install -m 0644 systemd/psion-sidecar.service /etc/systemd/system/psion-sidecar.service
-sudo chown -R "$USER":"$USER" /opt/psion-sidecar
 ```
 
-The current GitHub repository includes `epoc32_index.json` and `software_index.json`. If you use a source package that does not include them, omit those two filenames from the `cp` command and obtain the index files separately from sources you are authorised to use. The software catalogue will not work until both files are installed beside `sidecar_web.py`.
+The current GitHub repository includes `epoc16_index.json`, `epoc32_index.json`, and `software_index.json`. If you use a source package that does not include these files, obtain them separately from sources you are authorised to use. The software catalogue will not work fully until all three files are installed beside `sidecar_web.py`.
 
 The service file assumes the installation path `/opt/psion-sidecar`. If you choose another path, edit `WorkingDirectory` and `ExecStart` in `systemd/psion-sidecar.service` before installing it.
 
@@ -34,7 +33,7 @@ The service file assumes the installation path `/opt/psion-sidecar`. If you choo
 ```bash
 cd /opt/psion-sidecar
 python3 --version
-python3 -m py_compile sidecar_web.py guardian_pi.py
+python3 -m py_compile sidecar_web.py guardian_pi.py crossword_converter.py
 python3 sidecar_web.py
 ```
 
