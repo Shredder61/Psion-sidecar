@@ -12,7 +12,8 @@ import json
 HOST = "0.0.0.0"
 PORT = 8081
 
-ROOT = Path(__file__).resolve().parent / "crosswords"
+BASE_DIR = Path(__file__).resolve().parent
+ROOT = BASE_DIR / "crosswords"
 
 class SidecarHandler(SimpleHTTPRequestHandler):
 
@@ -124,11 +125,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             if platform not in ("epoc16", "epoc32"):
                 platform = "epoc32"
 
-            index_file = (
-                "/home/inkypikitch/guardian-migration/"
-                + platform
-                + "_index.json"
-            )
+            index_file = BASE_DIR / f"{platform}_index.json"
 
             with open(index_file, "r", encoding="utf-8") as f:
                 programs = json.load(f)
@@ -263,7 +260,7 @@ Filter:
 
         try:
             with open(
-                "/home/inkypikitch/guardian-migration/software_index.json",
+                BASE_DIR / "software_index.json",
                 "r",
                 encoding="utf-8"
             ) as f:
@@ -728,7 +725,7 @@ Runtime: {html.escape(runtimes)}
         try:
 
             with open(
-                "/home/inkypikitch/guardian-migration/software_index.json",
+                BASE_DIR / "software_index.json",
                 "r",
                 encoding="utf-8"
             ) as f:
