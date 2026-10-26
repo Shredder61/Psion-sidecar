@@ -70,7 +70,7 @@ python guardian_pi.py quick 17028 /home/pi/crosswords
 
 If no output directory is specified, the program uses its configured default.
 
-### How crosswords are retrieved
+## How crosswords are retrieved
 
 The downloader uses the Guardian's accessible crossword pages:
 
@@ -111,24 +111,33 @@ This OPL workflow is separate from the Python conversion performed by Sidecar.
 
 ## Psion Community software Sidecar downloader
 
-Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and obtain download links for matching `.SIS` installer packages.
+Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and access available downloads for matching software.
 
-The catalogue relies on two JSON index files in the project directory:
+The catalogue uses three JSON index files in the project directory:
 
-- `epoc32_index.json`
-- `software_index.json`
+- `epoc16_index.json` — EPOC16 software index.
+- `epoc32_index.json` — EPOC32 software index.
+- `software_index.json` — main software catalogue index.
 
-Both files are included in the current repository. They supply the catalogue data used by the software browsing features.
+All three index files are included in the repository and should be kept up to date.
 
-### Downloading software to the Psion
+## Downloading software
 
-When you initiate a download, the browser may initially use `Download.bin` as the filename. Wait for the transfer to finish, then select **Save** when prompted. The saved filename should then match the name supplied by the repository.
+Where a complete archive or package is available, Sidecar presents a **complete-package ZIP download**, which is the preferred option. This can be particularly useful when the software consists of multiple files.
 
-The downloaded file may retain a `.bin` extension. Follow the behaviour of your Psion browser and installer when saving and installing the file.
+Individual downloads are also available when supported by the catalogue entry. Depending on the entry, these may include `.SIS` installer packages or individual `.APP` and `.OPA` files.
 
-The availability of individual packages depends on the external software archive and the links recorded in the catalogue.
+The available download options depend on the software archive and the links recorded in the catalogue.
 
-Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes does not grant permission to redistribute the software they describe.
+## Saving downloads on a Psion
+
+When downloading through a Psion browser, the transfer may initially use a generic filename such as `Download.bin`. Wait for the transfer to finish and follow the browser's prompts to save the file.
+
+If an individual download is saved with a `.bin` extension rather than its original extension, you may need to rename it before using it.
+
+A ZIP package may need to be extracted on a compatible computer or device before its contents can be transferred to or used on the Psion. Do not assume that the Psion itself can extract every ZIP archive.
+
+Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes or download links does not grant permission to redistribute the software they describe.
 
 ## Quick start: installing the browser-based Sidecar
 
@@ -193,12 +202,13 @@ See [docs/PSION-SETUP.md](docs/PSION-SETUP.md) for notes on accessing the Sideca
 - `sidecar_web.py` — Sidecar web server and browser interface.
 - `guardian_pi.py` — Guardian crossword downloader.
 - `crossword_converter.py` — Python converter for producing RMR-format crossword files.
+- `crossword_converter_v01.txt` — OPL conversion program for use on the Psion.
 - `systemd/psion-sidecar.service` — example systemd service.
 - `crosswords/` — local crossword storage, including original and converted files.
 - `docs/` — installation and usage notes.
-- `epoc32_index.json` — Psion Community software index (EPOC32).
-- `software_index.json` — Psion Community software index (complete).
-- `crossword_converter_v01.txt` — OPL conversion program for use on the Psion.
+- `epoc16_index.json` — EPOC16 software index.
+- `epoc32_index.json` — EPOC32 software index.
+- `software_index.json` — main software catalogue index.
 
 ## Copyright, permissions and external services
 
