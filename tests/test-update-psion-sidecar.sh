@@ -108,6 +108,7 @@ export TEST_INSTALL_FAIL_FILE="$TMP/install-fail"
 export PATH="$MOCK_BIN:$PATH"
 
 # Success case: install v2 from fetched origin/main without advancing HEAD.
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/success.log"
 grep -q 'SUCCESS: Sidecar updated and responding.' "$TMP/success.log"
 grep -q 'VERSION = "v2"' "$APP/sidecar_web.py"
@@ -122,6 +123,7 @@ done
 sudo chown root:root "$APP/"*
 touch "$TEST_INSTALL_FAIL_FILE"
 set +e
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/install-failure.log" 2>&1
 status=$?
 set -e
@@ -134,6 +136,7 @@ done
 sudo chown root:root "$APP/"*
 touch "$TEST_CURL_FAIL_FILE"
 set +e
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/failure.log" 2>&1
 status=$?
 set -e
