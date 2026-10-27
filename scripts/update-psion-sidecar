@@ -92,8 +92,6 @@ rollback() {
         systemctl start "$SERVICE" || true
         echo "Previous application files restored."
         echo "Backup retained at: $BACKUP"
-UPDATE_IN_PROGRESS=0
-trap - ERR
         echo "Inspect logs with: sudo journalctl -u $SERVICE -n 60 --no-pager"
     else
         echo "CRITICAL: Automatic restoration failed. Backup retained at: $BACKUP"
@@ -141,3 +139,5 @@ echo "SUCCESS: Sidecar updated and responding."
 echo "Git version: $(runuser -u "$REPO_USER" -- git -C "$REPO" rev-parse --short HEAD)"
 echo "Crossword storage: writable by sidecar."
 echo "Backup retained at: $BACKUP"
+UPDATE_IN_PROGRESS=0
+trap - ERR
