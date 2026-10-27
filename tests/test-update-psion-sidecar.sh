@@ -11,7 +11,10 @@ REPO="$TMP/Psion-sidecar"
 APP="$TMP/installed"
 BACKUPS="$TMP/backups"
 mkdir -p "$MOCK_BIN" "$SEED" "$APP/crosswords" "$BACKUPS"
-trap 'rm -rf "$TMP"' EXIT
+cleanup() {
+    sudo rm -rf "$TMP"
+}
+trap cleanup EXIT
 
 if ! id sidecar >/dev/null 2>&1; then
     sudo useradd --system --no-create-home --shell /usr/sbin/nologin sidecar
@@ -94,6 +97,18 @@ sudo chmod 0755 "$APP" "$APP/crosswords"
 # Test against isolated paths and mocked systemctl/curl/install commands.
 TEST_UPDATER="$TMP/update-psion-sidecar"
 CURRENT_USER="$(id -un)"
+CURRENT_GROUP="$(id -gn)"
+
+reset_installed_files() {
+    # The updater installs files as root; temporarily return ownership so
+    # the unprivileged test runner can seed the next test's old version.
+    sudo chown "$CURRENT_USER:$CURRENT_GROUP" "$APP/"*
+    for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
+        printf 'VERSION = "old"\n' > "$APP/$file"
+    done
+    sudo chown root:root "$APP/"*
+}
+
 sed \
   -e "s|^REPO=\"/home/pi/Psion-sidecar\"|REPO=\"$REPO\"|" \
   -e "s|^APP=\"/opt/psion-sidecar\"|APP=\"$APP\"|" \
@@ -117,10 +132,7 @@ grep -q 'Local checkout left unchanged.' "$TMP/success.log"
 echo "PASS: successful update installs fetched version without moving local checkout"
 
 # Failure 1: force an install command to fail and exercise the ERR trap.
-for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
-    printf 'VERSION = "old"\n' > "$APP/$file"
-done
-sudo chown root:root "$APP/"*
+reset_installed_files()
 : > "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_INSTALL_FAIL_FILE"
 set +e
@@ -135,10 +147,7 @@ grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
 echo "PASS: install-command failure triggers ERR-trap rollback"
 
 # Failure 2: fail the homepage health check and verify explicit rollback.
-for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
-    printf 'VERSION = "old"\n' > "$APP/$file"
-done
-sudo chown root:root "$APP/"*
+reset_installed_files()
 : > "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_CURL_FAIL_FILE"
 set +e
