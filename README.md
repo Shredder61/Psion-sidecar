@@ -6,7 +6,7 @@ The Sidecar can be accessed from a Psion using a compatible browser such as Oper
 
 The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`.
 
-Thanks to Kian (https://www.kianryan.co.uk) and Daniel (https://github.com/danieledge), whose work on connectivity inspired me to get this project moving. My two mint-condition Psions—a special-edition green anniversary Psion 5 and a Psion 5mx—had been sitting in a cupboard for around a decade.
+Thanks to Kian (https://www.kianryan.co.uk) and Daniel (https://github.com/danieledge), whose work on connectivity inspired me to get this project moving. My two mint-condition Psions—a special-edition green anniversary Psion 5 and a Psion 5mx—had been sitting in a cupboard for around a decade. In my situation, I used Kian's sidecar settings for the Modem/Comms and now use Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers. However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it), I choose to add a separate Raspberry Pi on my network (which also displays shared calendars and 2Do lists on an e-Ink screen) to host a Psion "Home page", which gives the Psion access to the Psion Community software hyperlinks (the Psion searches the Pi's local catalogue), news/search hyperlinks, and The Guardian crossword puzzles.
 
 ## What's included
 
@@ -28,6 +28,36 @@ A Raspberry Pi is required to host the browser-based Sidecar, but it is not nece
 This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible.
 
 The Sidecar web interface is designed for simple, text-oriented browsing on older Psion devices. Features and external services may change over time. The RMR conversion workflow has been tested for successful file generation and download; compatibility with individual Psion crossword applications should be verified on the target device.
+
+## Psion Community software Sidecar downloader
+
+Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and access available downloads for matching software.
+
+The catalogue uses three JSON index files in the project directory:
+
+- `epoc16_index.json` — EPOC16 software index.
+- `epoc32_index.json` — EPOC32 software index.
+- `software_index.json` — main software catalogue index.
+
+All three index files are included in the repository and should be kept up to date.
+
+## Downloading software
+
+Where a complete archive or package is available, Sidecar presents a **complete-package ZIP download**, which is the preferred option. This can be particularly useful when the software consists of multiple files.
+
+Individual downloads are also available when supported by the catalogue entry. Depending on the entry, these may include `.SIS` installer packages or individual `.APP` and `.OPA` files.
+
+The available download options depend on the software archive and the links recorded in the catalogue.
+
+## Saving downloads on a Psion
+
+When downloading through a Psion browser, the transfer may initially use a generic filename such as `Download.bin`. Wait for the transfer to finish and follow the browser's prompts to save the file.
+
+If an individual download is saved with a `.bin` extension rather than its original extension, you may need to rename it before using it.
+
+A ZIP package may need to be extracted on a compatible computer or device before its contents can be transferred to or used on the Psion. Do not assume that the Psion itself can extract every ZIP archive.
+
+Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes or download links does not grant permission to redistribute the software they describe.
 
 ## Guardian Quick and Cryptic crossword downloads
 
@@ -108,36 +138,6 @@ To convert a crossword on the Psion, rather than using Sidecar's Python converte
 5. Open RMR / FatCatz Crossword and use **File → Open** to select the converted crossword.
 
 This OPL workflow is separate from the Python conversion performed by Sidecar.
-
-## Psion Community software Sidecar downloader
-
-Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and access available downloads for matching software.
-
-The catalogue uses three JSON index files in the project directory:
-
-- `epoc16_index.json` — EPOC16 software index.
-- `epoc32_index.json` — EPOC32 software index.
-- `software_index.json` — main software catalogue index.
-
-All three index files are included in the repository and should be kept up to date.
-
-## Downloading software
-
-Where a complete archive or package is available, Sidecar presents a **complete-package ZIP download**, which is the preferred option. This can be particularly useful when the software consists of multiple files.
-
-Individual downloads are also available when supported by the catalogue entry. Depending on the entry, these may include `.SIS` installer packages or individual `.APP` and `.OPA` files.
-
-The available download options depend on the software archive and the links recorded in the catalogue.
-
-## Saving downloads on a Psion
-
-When downloading through a Psion browser, the transfer may initially use a generic filename such as `Download.bin`. Wait for the transfer to finish and follow the browser's prompts to save the file.
-
-If an individual download is saved with a `.bin` extension rather than its original extension, you may need to rename it before using it.
-
-A ZIP package may need to be extracted on a compatible computer or device before its contents can be transferred to or used on the Psion. Do not assume that the Psion itself can extract every ZIP archive.
-
-Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes or download links does not grant permission to redistribute the software they describe.
 
 ## Quick start: installing the browser-based Sidecar
 
