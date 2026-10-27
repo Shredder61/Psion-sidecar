@@ -51,4 +51,4 @@ jobs:
         run: bash tests/test-update-psion-sidecar.sh
 
       - name: Test converted crossword links
-        run: python3 -m unittest discover -s tests -p 'test-crossword-rmr.py'
+        run: python3 tests/test-crossword-rmr.py
