@@ -28,6 +28,17 @@ case "$1" in
 esac
 MOCK
 
+cat > "$MOCK_BIN/install" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+last="${!#}"
+if [[ -f "${TEST_INSTALL_FAIL_FILE:?}" && "$last" == */guardian_pi.py ]]; then
+    rm -f "$TEST_INSTALL_FAIL_FILE"
+    exit 1
+fi
+exec /usr/bin/install "$@"
+MOCK
+
 cat > "$MOCK_BIN/curl" <<'MOCK'
 #!/usr/bin/env bash
 if [[ -f "${TEST_CURL_FAIL_FILE:?}" ]]; then
@@ -93,6 +104,7 @@ chmod 0755 "$TEST_UPDATER"
 
 export TEST_SYSTEMCTL_LOG="$TMP/systemctl.log"
 export TEST_CURL_FAIL_FILE="$TMP/curl-fail"
+export TEST_INSTALL_FAIL_FILE="$TMP/install-fail"
 export PATH="$MOCK_BIN:$PATH"
 
 # Success case: install v2 from fetched origin/main without advancing HEAD.
@@ -103,7 +115,40 @@ test "$(git -C "$REPO" rev-parse HEAD)" = "$OLD_CHECKOUT"
 grep -q 'Local checkout left unchanged.' "$TMP/success.log"
 echo "PASS: successful update installs fetched version without moving local checkout"
 
-# Failure case: simulate a health-check failure and verify rollback.
+# Failure case 1: fail an application-file install to exercise the ERR trap.
+for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
+    printf 'VERSION = "old"\\n' > "$APP/$file"
+done
+sudo chown root:root "$APP/"*
+touch "$TEST_INSTALL_FAIL_FILE"
+set +e
+sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/install-failure.log" 2>&1
+status=$?
+set -e
+test "$status" -ne 0
+grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/install-failure.log"
+grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
+grep -q '^start psion-sidecar.servicefor file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
+    printf 'VERSION = "old"\n' > "$APP/$file"
+done
+sudo chown root:root "$APP/"*
+touch "$TEST_CURL_FAIL_FILE"
+set +e
+sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/failure.log" 2>&1
+status=$?
+set -e
+rm -f "$TEST_CURL_FAIL_FILE"
+test "$status" -ne 0
+grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/failure.log"
+grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
+grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
+echo "PASS: simulated health-check failure restores previous files and attempts service restart"
+
+echo "All isolated updater tests passed."
+ "$TEST_SYSTEMCTL_LOG"
+echo "PASS: install-command failure triggers ERR-trap rollback"
+
+# Failure case 2: simulate a health-check failure and verify explicit rollback.
 for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
     printf 'VERSION = "old"\n' > "$APP/$file"
 done
