@@ -133,7 +133,7 @@ echo "PASS: successful update installs fetched version without moving local chec
 
 # Failure 1: force an install command to fail and exercise the ERR trap.
 reset_installed_files
-: > "$TEST_SYSTEMCTL_LOG"
+sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_INSTALL_FAIL_FILE"
 set +e
 # shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
@@ -148,7 +148,7 @@ echo "PASS: install-command failure triggers ERR-trap rollback"
 
 # Failure 2: fail the homepage health check and verify explicit rollback.
 reset_installed_files
-: > "$TEST_SYSTEMCTL_LOG"
+sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_CURL_FAIL_FILE"
 set +e
 # shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
