@@ -108,7 +108,7 @@ export TEST_INSTALL_FAIL_FILE="$TMP/install-fail"
 export PATH="$MOCK_BIN:$PATH"
 
 # Success case: install v2 from fetched origin/main without advancing HEAD.
-sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/success.log"
+sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/success.log"
 grep -q 'SUCCESS: Sidecar updated and responding.' "$TMP/success.log"
 grep -q 'VERSION = "v2"' "$APP/sidecar_web.py"
 test "$(git -C "$REPO" rev-parse HEAD)" = "$OLD_CHECKOUT"
