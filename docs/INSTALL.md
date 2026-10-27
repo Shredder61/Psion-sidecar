@@ -85,6 +85,26 @@ sudo journalctl -u psion-sidecar.service -n 100 --no-pager
 
 If the service does not start or a crossword download fails, check the logs. A `PermissionError` or `Permission denied` message involving `crosswords` usually indicates a directory or file permission problem.
 
+## 5. Optional: install the updater
+
+The repository includes `scripts/update-psion-sidecar`, which fetches the latest `main` branch, checks the Python files, backs up the installed application files, updates the service, and checks that the homepage responds. It also checks that the `sidecar` account can write to crossword storage before and after the update.
+
+The script assumes the repository is at `/home/pi/Psion-sidecar` and that the Linux account `pi` owns the Git checkout. If your checkout or account differs, edit `REPO` and `REPO_USER` near the top of the script before installing it.
+
+From the repository root, install it with:
+
+```bash
+sudo install -o root -g root -m 0755 scripts/update-psion-sidecar /usr/local/sbin/update-psion-sidecar
+```
+
+Run an update with:
+
+```bash
+sudo /usr/local/sbin/update-psion-sidecar
+```
+
+The updater refuses to proceed if the service is stopped or the Git checkout has uncommitted changes. It stores application backups in `/var/backups/psion-sidecar`. It updates application files but leaves the crossword files and their contents in place. The health check confirms that the homepage responds; it does not test an actual external crossword download.
+
 ## Security notes
 
 The server binds to all network interfaces on port 8081 by default and has no login or access control. It is intended for a trusted local network. Do not forward port 8081 from your router to the public internet. Consider firewall rules if the Raspberry Pi is reachable by untrusted devices.
