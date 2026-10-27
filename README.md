@@ -182,14 +182,51 @@ The server listens on `0.0.0.0` on port `8081` by default. Do not expose this po
 
 ## Screenshots
 
-The screenshots below show examples of the Sidecar workflow on a Psion 5mx, from browsing
-files in the Psion software community archive and downloading software to importing a crossword from the guardian (see docs/images for more detail).
+These screenshots illustrate the Sidecar homepage, the Psion Community software catalogue, and the Guardian crossword workflow on a Psion.
 
-![Psion file listing](docs/images/File%20listing%201.png)
+### Sidecar homepage
 
-![Downloading a software package](docs/images/Download%20in%20progress.png)
+![Psion Sidecar homepage](docs/images/sidecar-homepage.jpg)
 
-![A cryptic crossword after import](docs/images/Imported%20crossword%20-%20cryptic.png)
+### Psion Community software catalogue
+
+Search the catalogue and filter results by platform or program name.
+
+![Searching EPOC32 software](docs/images/software-search-epoc32.jpg)
+
+![Searching the catalogue for chess software](docs/images/software-search-chess.jpg)
+
+Review a program's available downloads, download a package, and install it on the Psion.
+
+![Chess software download options](docs/images/software-chess-download.jpg)
+
+![Downloading PhoneMan software](docs/images/software-phoneman-download.jpg)
+
+![Installing chess software on the Psion](docs/images/software-chess-install.jpg)
+
+![Contents of a downloaded ZIP package](docs/images/software-zip-contents.jpg)
+
+### Guardian crossword workflow
+
+Browse the local crossword archive, request a crossword, and download the original or converted RMR version.
+
+![Guardian crossword archive](docs/images/crossword-archive.jpg)
+
+![Requesting a Guardian crossword](docs/images/crossword-request.jpg)
+
+![Crossword request result](docs/images/crossword-request-result.jpg)
+
+![Downloading a crossword](docs/images/crossword-download.jpg)
+
+![Selecting the RMR-format crossword](docs/images/crossword-rmr-version.jpg)
+
+Open the converted file in RMR / FatCatz Crossword and save it in the desired folder.
+
+![Opening the converted crossword in RMR](docs/images/crossword-open-in-rmr.jpg)
+
+![Crossword save dialogue](docs/images/crossword-save-dialog.jpg)
+
+![Saved crossword](docs/images/crossword-saved.jpg)
 
 ## Installation as a service
 
