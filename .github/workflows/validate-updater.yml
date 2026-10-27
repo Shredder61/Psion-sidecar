@@ -49,3 +49,6 @@ jobs:
 
       - name: Exercise updater success and rollback paths
         run: bash tests/test-update-psion-sidecar.sh
+
+      - name: Test converted crossword links
+        run: python3 -m unittest discover -s tests -p 'test-crossword-rmr.py'
