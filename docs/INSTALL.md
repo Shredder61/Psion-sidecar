@@ -87,7 +87,7 @@ If the service does not start or a crossword download fails, check the logs. A `
 
 ## 5. Optional: install the updater
 
-The repository includes `scripts/update-psion-sidecar`, which fetches the latest `main` branch, checks the Python files, backs up the installed application files, updates the service, and checks that the homepage responds. It also checks that the `sidecar` account can write to crossword storage before and after the update.
+The repository includes `scripts/update-psion-sidecar`, which fetches the latest `main` branch into a temporary staging directory, checks the Python files, backs up the installed application files, updates the service, and checks that the homepage responds. It also checks that the `sidecar` account can write to crossword storage before and after the update. It does not merge or advance your local Git checkout, so a failed installation cannot leave the checkout ahead of the files installed in `/opt/psion-sidecar`.
 
 The script assumes the repository is at `/home/pi/Psion-sidecar` and that the Linux account `pi` owns the Git checkout. If your checkout or account differs, edit `REPO` and `REPO_USER` near the top of the script before installing it.
 
@@ -103,7 +103,7 @@ Run an update with:
 sudo /usr/local/sbin/update-psion-sidecar
 ```
 
-The updater refuses to proceed if the service is stopped or the Git checkout has uncommitted changes. It stores application backups in `/var/backups/psion-sidecar`. It updates application files but leaves the crossword files and their contents in place. The health check confirms that the homepage responds; it does not test an actual external crossword download.
+The updater refuses to proceed if the service is stopped or the Git checkout has uncommitted changes. It stores application backups in `/var/backups/psion-sidecar`. It updates application files but leaves the crossword files and their contents in place. The health check confirms that the homepage responds; it does not test an actual external crossword download. The repository's GitHub Actions workflow runs Bash syntax checks, ShellCheck, and an isolated test of the updater's success and health-check rollback paths.
 
 ## Security notes
 
