@@ -132,7 +132,7 @@ grep -q 'Local checkout left unchanged.' "$TMP/success.log"
 echo "PASS: successful update installs fetched version without moving local checkout"
 
 # Failure 1: force an install command to fail and exercise the ERR trap.
-reset_installed_files()
+reset_installed_files
 : > "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_INSTALL_FAIL_FILE"
 set +e
@@ -147,7 +147,7 @@ grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
 echo "PASS: install-command failure triggers ERR-trap rollback"
 
 # Failure 2: fail the homepage health check and verify explicit rollback.
-reset_installed_files()
+reset_installed_files
 : > "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_CURL_FAIL_FILE"
 set +e
