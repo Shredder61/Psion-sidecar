@@ -21,37 +21,37 @@ to it.
 Use the homepage links to browse locally stored crossword files and other
 available resources.
 
-![Psion file listing](images/File%20listing%201.png)
-
-![Another view of the file listing](images/File%20listing%202.png)
-
 ## 3. Search the Psion Community software catalogue
 
 1. Select the Psion Community software link on the Sidecar homepage.
 2. Choose the platform that matches the software you need: **EPOC16** or
    **EPOC32**. These are separate catalogue indexes, so check the platform
    before searching.
+
+![EPOC16 and EPOC32 platform selector](images/software-platform-selector.jpg)
+
 3. Enter part or all of the program name in the search/filter field. For
-   example, search for `chess` to find chess-related software.
+   example, search for `Phoneman` to find this software.
 4. Review the matching results and select the program you want.
+
+![Psion file listing](images/File%20listing%201.png)
+
+![Downloading PhoneMan software](images/software-phoneman-download.jpg)
+
 5. Check the available downloads and choose the appropriate package. Where a
    complete-package ZIP is offered, it is generally the best choice for
    software made up of several files. Individual `.SIS`, `.APP` or `.OPA`
    downloads may also be available, depending on the catalogue entry.
 6. Follow the browser's prompts and wait for the download to finish.
 
-The example below shows a search with EPOC32 selected. The platform selector
+The example below shows a search for chess programs with EPOC32 selected. The platform selector
 lets you switch between EPOC16 and EPOC32 before searching.
-
-![EPOC16 and EPOC32 platform selector](images/software-platform-selector.jpg)
 
 ![Searching EPOC32 software](images/software-search-epoc32.jpg)
 
 ![Searching the catalogue for chess software](images/software-search-chess.jpg)
 
 ![Chess software download options](images/software-chess-download.jpg)
-
-![Downloading PhoneMan software](images/software-phoneman-download.jpg)
 
 ### Saving and installing software
 
@@ -60,9 +60,8 @@ Follow the save prompt and check the resulting filename before attempting to
 install the package. If an individual download is saved with a `.bin`
 extension rather than its original extension, you may need to rename it.
 
-A ZIP package may need to be extracted on a compatible computer or device
-before its contents can be transferred to or used on the Psion. Do not assume
-that the Psion itself can extract every ZIP archive.
+A ZIP package may need to be extracted (e.g., RMR Unzip) before its contents 
+can be installed on the Psion.
 
 ![Contents of a downloaded ZIP package](images/software-zip-contents.jpg)
 
@@ -77,10 +76,10 @@ software you download.
 1. On the Sidecar homepage, choose the Quick or Cryptic crossword option.
 2. Enter the crossword number and submit the request.
 3. When the request completes, choose the version you need:
+   - **RMR version** (preferred) — converted by Sidecar on the Raspberry Pi and intended to
+     be opened directly in a compatible RMR / FatCatz crossword application.
    - **Original** — the original text file, intended for conversion before use
      in a compatible RMR / FatCatz crossword application.
-   - **RMR version** — converted by Sidecar on the Raspberry Pi and intended to
-     be opened directly in a compatible RMR / FatCatz crossword application.
 4. Select the download link and follow the browser's prompts to save the file
    on the Psion. You can also use the local archive to retrieve a crossword
    already stored on the Raspberry Pi.
