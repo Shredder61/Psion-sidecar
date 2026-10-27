@@ -8,6 +8,7 @@ APP="/opt/psion-sidecar"
 SERVICE="psion-sidecar.service"
 BACKUP_DIR="/var/backups/psion-sidecar"
 REPO_USER="pi"
+SOURCE_DIR=""
 CROSSWORDS="$APP/crosswords"
 FILES=(
     sidecar_web.py
@@ -36,6 +37,13 @@ done
 id sidecar >/dev/null 2>&1 || { echo "ERROR: Linux service account 'sidecar' does not exist."; exit 1; }
 id "$REPO_USER" >/dev/null 2>&1 || { echo "ERROR: Repository owner account '$REPO_USER' does not exist."; exit 1; }
 
+cleanup() {
+    if [[ -n "$SOURCE_DIR" && -d "$SOURCE_DIR" ]]; then
+        rm -rf -- "$SOURCE_DIR"
+    fi
+}
+trap cleanup EXIT
+
 # Ensure the writable data directory exists and its directory entry belongs to
 # the service user. This does not recursively change ownership of stored files.
 install -d -o sidecar -g sidecar -m 0755 "$CROSSWORDS"
@@ -53,7 +61,6 @@ if ! systemctl is-active --quiet "$SERVICE"; then
     exit 1
 fi
 
-cd "$REPO"
 if [[ -n "$(runuser -u "$REPO_USER" -- git -C "$REPO" status --porcelain)" ]]; then
     echo "ERROR: Git checkout has local changes."
     echo "Resolve them before updating. No application files changed."
@@ -62,18 +69,21 @@ fi
 
 echo "Fetching updates from GitHub..."
 runuser -u "$REPO_USER" -- git -C "$REPO" fetch origin main
-runuser -u "$REPO_USER" -- git -C "$REPO" merge --ff-only origin/main
+SOURCE_COMMIT="$(runuser -u "$REPO_USER" -- git -C "$REPO" rev-parse origin/main)"
+SOURCE_DIR="$(mktemp -d /tmp/psion-sidecar-update.XXXXXX)"
+echo "Preparing source commit: ${SOURCE_COMMIT:0:12}"
+runuser -u "$REPO_USER" -- git -C "$REPO" archive origin/main | tar -x -C "$SOURCE_DIR"
 
 echo "Checking required files..."
 for file in "${FILES[@]}"; do
-    if [[ ! -f "$REPO/$file" ]]; then
-        echo "ERROR: Missing $file. No application files changed."
+    if [[ ! -f "$SOURCE_DIR/$file" ]]; then
+        echo "ERROR: Missing $file in fetched GitHub main. No application files changed."
         exit 1
     fi
 done
 
 echo "Checking Python syntax..."
-python3 -m py_compile "$REPO/sidecar_web.py" "$REPO/guardian_pi.py" "$REPO/crossword_converter.py"
+python3 -m py_compile "$SOURCE_DIR/sidecar_web.py" "$SOURCE_DIR/guardian_pi.py" "$SOURCE_DIR/crossword_converter.py"
 
 mkdir -p "$BACKUP_DIR"
 STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -120,7 +130,7 @@ systemctl stop "$SERVICE"
 
 echo "Installing application files..."
 for file in "${FILES[@]}"; do
-    install -o root -g root -m 0644 "$REPO/$file" "$APP/$file"
+    install -o root -g root -m 0644 "$SOURCE_DIR/$file" "$APP/$file"
 done
 
 echo "Starting Sidecar..."
@@ -150,7 +160,8 @@ fi
 
 echo
 echo "SUCCESS: Sidecar updated and responding."
-echo "Git version: $(runuser -u "$REPO_USER" -- git -C "$REPO" rev-parse --short HEAD)"
+echo "Installed Git version: ${SOURCE_COMMIT:0:12}"
+echo "Local checkout left unchanged."
 echo "Crossword storage: writable by sidecar."
 echo "Backup retained at: $BACKUP"
 UPDATE_IN_PROGRESS=0
