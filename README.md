@@ -232,7 +232,7 @@ Open the converted file in RMR / FatCatz Crossword and save it in the desired fo
 
 See [docs/INSTALL.md](docs/INSTALL.md) for instructions on installing the server as a systemd service.
 
-See [docs/PSION-SETUP.md](docs/PSION-SETUP.md) for notes on accessing the Sidecar from a Psion.
+For step-by-step instructions on accessing Sidecar from a Psion, searching the software catalogue, and downloading software or crosswords, see [Using Sidecar from a Psion](docs/PSION-SETUP.md).
 
 ## Project files
 
