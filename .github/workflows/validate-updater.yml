@@ -1,0 +1,43 @@
+name: Validate Sidecar updater
+
+on:
+  pull_request:
+    paths:
+      - "scripts/update-psion-sidecar"
+      - "tests/test-update-psion-sidecar.sh"
+      - ".github/workflows/validate-updater.yml"
+  push:
+    branches:
+      - main
+      - "fix/crossword-directory-permissions"
+    paths:
+      - "scripts/update-psion-sidecar"
+      - "tests/test-update-psion-sidecar.sh"
+      - ".github/workflows/validate-updater.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  shell-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+
+      - name: Check Bash syntax
+        run: |
+          bash -n scripts/update-psion-sidecar
+          bash -n tests/test-update-psion-sidecar.sh
+
+      - name: Run ShellCheck
+        run: |
+          shellcheck scripts/update-psion-sidecar tests/test-update-psion-sidecar.sh
+
+      - name: Exercise updater success and rollback paths
+        run: bash tests/test-update-psion-sidecar.sh
