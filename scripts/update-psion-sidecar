@@ -87,15 +87,29 @@ rollback() {
     echo
     echo "UPDATE FAILED. Restoring the previous application files..."
     systemctl stop "$SERVICE" || true
-    if tar -xzf "$BACKUP" -C "$APP"; then
-        chown root:root "${FILES[@]/#/$APP/}"
-        systemctl start "$SERVICE" || true
-        echo "Previous application files restored."
+
+    if ! tar -xzf "$BACKUP" -C "$APP"; then
+        echo "CRITICAL: Could not restore the previous application files."
+        echo "The service has been left stopped to avoid running a partial update."
         echo "Backup retained at: $BACKUP"
-        echo "Inspect logs with: sudo journalctl -u $SERVICE -n 60 --no-pager"
-    else
-        echo "CRITICAL: Automatic restoration failed. Backup retained at: $BACKUP"
+        exit 1
     fi
+
+    if ! chown root:root "${FILES[@]/#/$APP/}"; then
+        echo "CRITICAL: Files were extracted from the backup, but ownership could not be restored."
+        echo "The service has been left stopped. Inspect ownership before restarting."
+        echo "Backup retained at: $BACKUP"
+        exit 1
+    fi
+
+    if systemctl start "$SERVICE"; then
+        echo "Previous application files restored and service restart succeeded."
+    else
+        echo "WARNING: Previous application files were restored, but the service did not restart."
+        echo "Inspect logs with: sudo journalctl -u $SERVICE -n 60 --no-pager"
+    fi
+    echo "Backup retained at: $BACKUP"
+    echo "Inspect logs with: sudo journalctl -u $SERVICE -n 60 --no-pager"
     exit 1
 }
 
