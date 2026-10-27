@@ -1100,6 +1100,21 @@ Runtime: {html.escape(runtimes)}
         import re
 
         filename = query.get("file", [""])[0].strip()
+
+        # Be tolerant of a stale archive page that links an already-converted
+        # file as an RMR input. Redirect to the existing file instead of
+        # rejecting it as an invalid original crossword filename.
+        if re.fullmatch(r"(?:Quick|Cryptic)_\d+_converted\.txt", filename):
+            output_path = ROOT / filename
+            if output_path.is_file():
+                self.send_response(302)
+                self.send_header("Location", "/" + quote(output_path.name))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+            else:
+                self.send_error(404, "Converted crossword not found")
+            return
+
         if not re.fullmatch(r"(?:Quick|Cryptic)_\d+\.txt", filename):
             self.send_error(400, "Invalid crossword filename")
             return
