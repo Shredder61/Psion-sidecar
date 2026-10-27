@@ -1100,6 +1100,21 @@ Runtime: {html.escape(runtimes)}
         import re
 
         filename = query.get("file", [""])[0].strip()
+
+        # Be tolerant of a stale archive page that links an already-converted
+        # file as an RMR input. Redirect to the existing file instead of
+        # rejecting it as an invalid original crossword filename.
+        if re.fullmatch(r"(?:Quick|Cryptic)_\d+_converted\.txt", filename):
+            output_path = ROOT / filename
+            if output_path.is_file():
+                self.send_response(302)
+                self.send_header("Location", "/" + quote(output_path.name))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+            else:
+                self.send_error(404, "Converted crossword not found")
+            return
+
         if not re.fullmatch(r"(?:Quick|Cryptic)_\d+\.txt", filename):
             self.send_error(400, "Invalid crossword filename")
             return
@@ -1333,13 +1348,22 @@ Runtime: {html.escape(runtimes)}
         quick_high = latest_quick or QUICK_MAX
         cryptic_high = latest_cryptic or CRYPTIC_MAX
 
+        # Converted RMR files are outputs, not source crosswords.
+        # Keep them out of the archive list so they do not get an
+        # invalid second "RMR version" link.
         quick_files = sorted(
-            ROOT.glob("Quick_*.txt"),
+            (
+                p for p in ROOT.glob("Quick_*.txt")
+                if not p.stem.endswith("_converted")
+            ),
             key=lambda p: p.name
         )
 
         cryptic_files = sorted(
-            ROOT.glob("Cryptic_*.txt"),
+            (
+                p for p in ROOT.glob("Cryptic_*.txt")
+                if not p.stem.endswith("_converted")
+            ),
             key=lambda p: p.name
         )
 
