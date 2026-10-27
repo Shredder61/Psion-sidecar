@@ -108,6 +108,7 @@ export TEST_INSTALL_FAIL_FILE="$TMP/install-fail"
 export PATH="$MOCK_BIN:$PATH"
 
 # Success: install the newly fetched commit without moving the checkout.
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/success.log"
 grep -q 'SUCCESS: Sidecar updated and responding.' "$TMP/success.log"
 grep -q 'VERSION = "v2"' "$APP/sidecar_web.py"
