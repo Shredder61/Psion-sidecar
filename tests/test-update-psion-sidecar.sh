@@ -122,6 +122,7 @@ for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.js
 done
 sudo chown root:root "$APP/"*
 touch "$TEST_INSTALL_FAIL_FILE"
+: > "$TEST_SYSTEMCTL_LOG"
 set +e
 # shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/install-failure.log" 2>&1
@@ -135,6 +136,7 @@ grep -q '^start psion-sidecar.servicefor file in sidecar_web.py guardian_pi.py c
 done
 sudo chown root:root "$APP/"*
 touch "$TEST_CURL_FAIL_FILE"
+: > "$TEST_SYSTEMCTL_LOG"
 set +e
 # shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/failure.log" 2>&1
