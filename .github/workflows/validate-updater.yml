@@ -5,6 +5,8 @@ on:
     paths:
       - "scripts/update-psion-sidecar"
       - "tests/test-update-psion-sidecar.sh"
+      - "tests/test-crossword-rmr.py"
+      - "sidecar_web.py"
       - ".github/workflows/validate-updater.yml"
   push:
     branches:
@@ -13,6 +15,8 @@ on:
     paths:
       - "scripts/update-psion-sidecar"
       - "tests/test-update-psion-sidecar.sh"
+      - "tests/test-crossword-rmr.py"
+      - "sidecar_web.py"
       - ".github/workflows/validate-updater.yml"
 
 permissions:
