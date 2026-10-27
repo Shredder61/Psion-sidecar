@@ -40,8 +40,8 @@ available resources.
    downloads may also be available, depending on the catalogue entry.
 6. Follow the browser's prompts and wait for the download to finish.
 
-The screenshot below shows the catalogue with EPOC32 selected. It illustrates
-the search results, but not the platform menu while it is open.
+The example below shows a search with EPOC32 selected. The platform selector
+lets you switch between EPOC16 and EPOC32 before searching.
 
 ![Searching EPOC32 software](images/software-search-epoc32.jpg)
 
