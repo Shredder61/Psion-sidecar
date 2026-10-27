@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Regression tests for stale links to converted Guardian crosswords."""
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+# Running this file directly puts tests/ on sys.path, not the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import sidecar_web
 
