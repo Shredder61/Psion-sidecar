@@ -82,8 +82,8 @@ git -C "$SEED" add .
 git -C "$SEED" commit -m "fixture v2" >/dev/null
 git -C "$SEED" push origin main >/dev/null
 
-# Seed the installed app with the old version. Keep crosswords writable by
-# the service account; other application files are root-owned.
+# Seed the installed app with old files. The updater should correct the
+# crossword directory's ownership and mode without touching its contents.
 for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
     printf 'VERSION = "old"\n' > "$APP/$file"
 done
@@ -91,7 +91,7 @@ sudo chown root:root "$APP"
 sudo chown sidecar:sidecar "$APP/crosswords"
 sudo chmod 0755 "$APP" "$APP/crosswords"
 
-# Use a temporary copy with paths redirected into this test directory.
+# Test against isolated paths and mocked systemctl/curl/install commands.
 TEST_UPDATER="$TMP/update-psion-sidecar"
 CURRENT_USER="$(id -un)"
 sed \
@@ -107,8 +107,7 @@ export TEST_CURL_FAIL_FILE="$TMP/curl-fail"
 export TEST_INSTALL_FAIL_FILE="$TMP/install-fail"
 export PATH="$MOCK_BIN:$PATH"
 
-# Success case: install v2 from fetched origin/main without advancing HEAD.
-# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
+# Success: install the newly fetched commit without moving the checkout.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/success.log"
 grep -q 'SUCCESS: Sidecar updated and responding.' "$TMP/success.log"
 grep -q 'VERSION = "v2"' "$APP/sidecar_web.py"
@@ -116,13 +115,13 @@ test "$(git -C "$REPO" rev-parse HEAD)" = "$OLD_CHECKOUT"
 grep -q 'Local checkout left unchanged.' "$TMP/success.log"
 echo "PASS: successful update installs fetched version without moving local checkout"
 
-# Failure case 1: fail an application-file install to exercise the ERR trap.
+# Failure 1: force an install command to fail and exercise the ERR trap.
 for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
-    printf 'VERSION = "old"\\n' > "$APP/$file"
+    printf 'VERSION = "old"\n' > "$APP/$file"
 done
 sudo chown root:root "$APP/"*
-touch "$TEST_INSTALL_FAIL_FILE"
 : > "$TEST_SYSTEMCTL_LOG"
+touch "$TEST_INSTALL_FAIL_FILE"
 set +e
 # shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/install-failure.log" 2>&1
@@ -131,43 +130,26 @@ set -e
 test "$status" -ne 0
 grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/install-failure.log"
 grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
-grep -q '^start psion-sidecar.servicefor file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
-    printf 'VERSION = "old"\n' > "$APP/$file"
-done
-sudo chown root:root "$APP/"*
-touch "$TEST_CURL_FAIL_FILE"
-: > "$TEST_SYSTEMCTL_LOG"
-set +e
-# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
-sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/failure.log" 2>&1
-status=$?
-set -e
-rm -f "$TEST_CURL_FAIL_FILE"
-test "$status" -ne 0
-grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/failure.log"
-grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
 grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
-echo "PASS: simulated health-check failure restores previous files and attempts service restart"
-
-echo "All isolated updater tests passed."
- "$TEST_SYSTEMCTL_LOG"
 echo "PASS: install-command failure triggers ERR-trap rollback"
 
-# Failure case 2: simulate a health-check failure and verify explicit rollback.
+# Failure 2: fail the homepage health check and verify explicit rollback.
 for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
     printf 'VERSION = "old"\n' > "$APP/$file"
 done
 sudo chown root:root "$APP/"*
+: > "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_CURL_FAIL_FILE"
 set +e
-sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/failure.log" 2>&1
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
+sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/health-failure.log" 2>&1
 status=$?
 set -e
 rm -f "$TEST_CURL_FAIL_FILE"
 test "$status" -ne 0
-grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/failure.log"
+grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/health-failure.log"
 grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
 grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
-echo "PASS: simulated health-check failure restores previous files and attempts service restart"
+echo "PASS: health-check failure restores previous files and attempts service restart"
 
 echo "All isolated updater tests passed."
