@@ -1333,13 +1333,22 @@ Runtime: {html.escape(runtimes)}
         quick_high = latest_quick or QUICK_MAX
         cryptic_high = latest_cryptic or CRYPTIC_MAX
 
+        # Converted RMR files are outputs, not source crosswords.
+        # Keep them out of the archive list so they do not get an
+        # invalid second "RMR version" link.
         quick_files = sorted(
-            ROOT.glob("Quick_*.txt"),
+            (
+                p for p in ROOT.glob("Quick_*.txt")
+                if not p.stem.endswith("_converted")
+            ),
             key=lambda p: p.name
         )
 
         cryptic_files = sorted(
-            ROOT.glob("Cryptic_*.txt"),
+            (
+                p for p in ROOT.glob("Cryptic_*.txt")
+                if not p.stem.endswith("_converted")
+            ),
             key=lambda p: p.name
         )
 
