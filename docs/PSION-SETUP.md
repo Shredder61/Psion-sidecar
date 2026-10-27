@@ -43,6 +43,8 @@ available resources.
 The example below shows a search with EPOC32 selected. The platform selector
 lets you switch between EPOC16 and EPOC32 before searching.
 
+![EPOC16 and EPOC32 platform selector](images/software-platform-selector.jpg)
+
 ![Searching EPOC32 software](images/software-search-epoc32.jpg)
 
 ![Searching the catalogue for chess software](images/software-search-chess.jpg)
