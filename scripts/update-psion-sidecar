@@ -40,6 +40,7 @@ id "$REPO_USER" >/dev/null 2>&1 || { echo "ERROR: Repository owner account '$REP
 # the service user. This does not recursively change ownership of stored files.
 install -d -o sidecar -g sidecar -m 0755 "$CROSSWORDS"
 chown sidecar:sidecar "$CROSSWORDS"
+chmod 0755 "$CROSSWORDS"
 if ! runuser -u sidecar -- test -w "$CROSSWORDS"; then
     echo "ERROR: The Sidecar service user cannot write to $CROSSWORDS"
     echo "Check the directory and its parent-directory permissions."
@@ -81,6 +82,8 @@ tar -czf "$BACKUP" -C "$APP" "${FILES[@]}"
 echo "Backup: $BACKUP"
 
 rollback() {
+    trap - ERR
+    UPDATE_IN_PROGRESS=0
     echo
     echo "UPDATE FAILED. Restoring the previous application files..."
     systemctl stop "$SERVICE" || true
@@ -89,6 +92,8 @@ rollback() {
         systemctl start "$SERVICE" || true
         echo "Previous application files restored."
         echo "Backup retained at: $BACKUP"
+UPDATE_IN_PROGRESS=0
+trap - ERR
         echo "Inspect logs with: sudo journalctl -u $SERVICE -n 60 --no-pager"
     else
         echo "CRITICAL: Automatic restoration failed. Backup retained at: $BACKUP"
@@ -96,6 +101,8 @@ rollback() {
     exit 1
 }
 
+trap 'if [[ "${UPDATE_IN_PROGRESS:-0}" -eq 1 ]]; then rollback; fi' ERR
+UPDATE_IN_PROGRESS=1
 echo "Stopping Sidecar for the update..."
 systemctl stop "$SERVICE"
 
