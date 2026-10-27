@@ -12,6 +12,132 @@ import json
 HOST = "0.0.0.0"
 PORT = 8081
 
+
+def _normalise_package_name(value):
+    return re.sub(r"[^a-z0-9]+", "", str(value).lower())
+
+
+def _find_package_archive(item_filename, references):
+    """Choose a ZIP relevant to this installer, not a shared dependency."""
+    from urllib.parse import unquote_plus
+
+    archive_extensions = (".zip", ".iso", ".tar", ".7z", ".rar")
+    item_stem = item_filename.rsplit(".", 1)[0]
+    item_token = _normalise_package_name(item_stem)
+
+    # Build aliases from references to this item, including references
+    # without URLs, such as "banktran/s3export.app".
+    aliases = set()
+
+    for reference in references:
+        reference_name = unquote_plus(
+            str(reference.get("name", ""))
+        ).replace("\\", "/")
+
+        url = reference.get("url", "")
+        url_path = urlparse(url).path if url else ""
+        url_leaf = (
+            unquote_plus(url_path.rsplit("/", 1)[-1])
+            if url_path else ""
+        )
+        name_leaf = reference_name.rsplit("/", 1)[-1]
+
+        if (
+            name_leaf.lower() == item_filename.lower()
+            or url_leaf.lower() == item_filename.lower()
+        ):
+            name_parts = reference_name.split("/")
+            for part in name_parts[-2:-1]:
+                part = part.strip()
+                if part and not part.lower().endswith(archive_extensions):
+                    token = _normalise_package_name(part)
+                    if token:
+                        aliases.add(token)
+
+    candidates = []
+
+    for position, reference in enumerate(references):
+        url = reference.get("url", "")
+        if not url:
+            continue
+
+        parsed = urlparse(url)
+        url_path = parsed.path
+
+        reference_name = unquote_plus(
+            str(reference.get("name", ""))
+        ).replace("\\", "/")
+
+        if not reference_name:
+            reference_name = unquote_plus(
+                url_path.rsplit("/", 1)[-1]
+            )
+
+        archive_name = reference_name.rsplit("/", 1)[-1]
+
+        if not archive_name.lower().endswith(".zip"):
+            continue
+
+        path_parts = url_path.split("/")
+        has_archive_parent = any(
+            unquote_plus(part).lower().endswith(archive_extensions)
+            for part in path_parts[:-1]
+        )
+
+        host = (parsed.hostname or "").lower()
+
+        archive_org_nested_zip = (
+            has_archive_parent
+            and (
+                host == "archive.org"
+                or host.endswith(".archive.org")
+            )
+            and any(
+                unquote_plus(part).lower().endswith((".zip", ".iso"))
+                for part in path_parts[:-1]
+            )
+        )
+
+        # Do not treat arbitrary nested files as package downloads.
+        if has_archive_parent and not archive_org_nested_zip:
+            continue
+
+        archive_stem = archive_name.rsplit(".", 1)[0]
+        archive_token = _normalise_package_name(archive_stem)
+
+        if not archive_token:
+            continue
+
+        score = 0
+
+        # A matching archive name is the strongest evidence.
+        if archive_token == item_token:
+            score = 100
+        elif item_token and (
+            item_token in archive_token or archive_token in item_token
+        ):
+            score = 90
+
+        # Allow a differently named ZIP when its name matches a directory
+        # containing the actual installer, e.g. BANKTRAN/S3EXPORT.APP.
+        if archive_token in aliases:
+            score = max(score, 80)
+
+        if score:
+            # Prefer a specific nested package over an equally named
+            # top-level reference.
+            if archive_org_nested_zip:
+                score += 5
+
+            candidates.append((score, -position, reference))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+    return candidates[0][2]
+
+
 BASE_DIR = Path(__file__).resolve().parent
 ROOT = BASE_DIR / "crosswords"
 
@@ -322,7 +448,6 @@ Filter:
 
                         download_url = None
                         package_url = None
-                        zip_references = []
 
                         archive_extensions = (
                             ".zip", ".iso", ".tar", ".7z", ".rar"
@@ -386,40 +511,16 @@ Filter:
                                         download_url = reference_url
                                         break
 
-                                # Prefer individually referenced ZIPs nested
-                                # inside Archive.org collections. The catalogue
-                                # associates the package with this programme,
-                                # so its filename need not match the APP/OPA.
-                                archive_org_nested_zip = (
-                                    has_archive_parent
-                                    and (
-                                        archive_host == "archive.org"
-                                        or archive_host.endswith(".archive.org")
-                                    )
-                                    and any(
-                                        part.lower().endswith((".zip", ".iso"))
-                                        for part in path_parts[:-1]
-                                    )
-                                )
 
-                                if reference_path.endswith(".zip"):
-                                    if archive_org_nested_zip:
-                                        zip_references.insert(0, reference_url)
-                                    elif not has_archive_parent:
-                                        programme_token = (
-                                            filename.rsplit(".", 1)[0].lower()
-                                        )
-                                        archive_name = path_parts[-1].lower()
 
-                                        if (
-                                            programme_token
-                                            and programme_token in archive_name
-                                        ):
-                                            zip_references.append(reference_url)
 
-                            if zip_references:
-                                package_url = zip_references[0]
-
+                        if item.get("kind") in ("installer", "standalone"):
+                            selected_package_reference = _find_package_archive(
+                                filename,
+                                item.get("references", item.get("reference", []))
+                            )
+                            if selected_package_reference:
+                                package_url = selected_package_reference.get("url")
 
                         candidate = {
                             "filename": filename,
@@ -776,8 +877,8 @@ Runtime: {html.escape(runtimes)}
                         references = item.get("references", item.get("reference", []))
 
                         if is_package:
-                            # Never use a package link for an item with
-                            # an SIS installer reference.
+                            # Preserve existing behaviour: do not offer a package download
+                            # when this item has an SIS installer reference.
                             has_sis = any(
                                 ref.get("url")
                                 and urlparse(ref["url"]).path.lower().endswith(".sis")
@@ -787,71 +888,26 @@ Runtime: {html.escape(runtimes)}
                             if has_sis:
                                 continue
 
-                            programme_token = (
-                                item_filename.rsplit(".", 1)[0].lower()
+                            selected_package_reference = _find_package_archive(
+                                item_filename,
+                                references
                             )
 
-                            for reference in references:
-                                reference_url = reference.get("url")
+                            if selected_package_reference:
+                                download_url = selected_package_reference.get("url")
 
-                                if not reference_url:
-                                    continue
+                                if download_url:
+                                    from urllib.parse import unquote_plus
 
-                                reference_path = urlparse(
-                                    reference_url
-                                ).path
+                                    selected_name = unquote_plus(
+                                        str(
+                                            selected_package_reference.get("name", "")
+                                            or urlparse(download_url).path.rsplit("/", 1)[-1]
+                                        )
+                                    ).replace("\\", "/")
 
-                                if not reference_path.lower().endswith(".zip"):
-                                    continue
-
-                                path_parts = reference_path.split("/")
-
-                                has_archive_parent = any(
-                                    part.lower().endswith(archive_extensions)
-                                    for part in path_parts[:-1]
-                                )
-
-                                archive_host = (
-                                    urlparse(reference_url).hostname or ""
-                                ).lower()
-
-                                archive_org_nested_zip = (
-                                    has_archive_parent
-                                    and (
-                                        archive_host == "archive.org"
-                                        or archive_host.endswith(".archive.org")
-                                    )
-                                    and any(
-                                        part.lower().endswith((".zip", ".iso"))
-                                        for part in path_parts[:-1]
-                                    )
-                                )
-
-                                if has_archive_parent and not archive_org_nested_zip:
-                                    continue
-
-                                archive_name = path_parts[-1].lower()
-
-                                # Nested Archive.org ZIP references are
-                                # associated with the programme by the
-                                # catalogue, even if filenames differ.
-                                # Keep filename matching for direct ZIPs.
-                                if not archive_org_nested_zip:
-                                    if (
-                                        not programme_token
-                                        or programme_token not in archive_name
-                                    ):
-                                        continue
-
-                                download_url = reference_url
-
-                                filename = (
-                                    reference.get("name", "")
-                                    or path_parts[-1]
-                                ).replace("\\", "/").rsplit("/", 1)[-1]
-
-                                output_filename = filename
-                                break
+                                    filename = selected_name.rsplit("/", 1)[-1]
+                                    output_filename = filename
 
                             if download_url:
                                 break

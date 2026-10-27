@@ -13,7 +13,7 @@ cd Psion-sidecar
 
 ## 2. Install the application files
 
-The server expects its crossword storage directory and, for the software catalogue, both JSON indexes to be beside `sidecar_web.py`.
+The server expects its crossword storage directory and all three software catalogue index files to be beside `sidecar_web.py`.
 
 From the repository root, run:
 
@@ -51,7 +51,8 @@ Create the dedicated service account if it does not already exist, then assign o
 
 ```bash
 id sidecar >/dev/null 2>&1 || sudo useradd --system --home-dir /opt/psion-sidecar --shell /usr/sbin/nologin sidecar
-sudo chown -R sidecar:sidecar /opt/psion-sidecar
+sudo chown -R root:root /opt/psion-sidecar
+sudo chown -R sidecar:sidecar /opt/psion-sidecar/crosswords
 sudo systemctl daemon-reload
 sudo systemctl enable --now psion-sidecar.service
 sudo systemctl status psion-sidecar.service --no-pager
