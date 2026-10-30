@@ -2,7 +2,7 @@
 
 Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads (native or RMR / FatCatz format), access to your locally stored crossword files, Psion Community software browsing and a Psion-friendly search page. 
 
-The Sidecar can be accessed from a Psion using a compatible browser such as Opera or PsiWeb. The Raspberry Pi provides the web server and connects to the external services used by the project.
+The Sidecar can be accessed from a Psion using a compatible browser such as Opera or PsiWeb. The Raspberry Pi provides the web server and connects to the external services used by the project. Note that, when searching for Psion software, the first program search may take a little longer while the local cache is created.
 
 The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`.
 
