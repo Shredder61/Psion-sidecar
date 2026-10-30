@@ -1,0 +1,346 @@
+# Psion Sidecar: Software Indexes, Selection, Sources and Validation
+
+## 1. Overview
+
+The Psion Sidecar software catalogue uses three JSON files to support browsing and selecting software for EPOC16 and EPOC32 devices.
+
+The files have distinct purposes:
+
+- `epoc16_index.json` — compact index of software available for EPOC16.
+- `epoc32_index.json` — compact index of software available for EPOC32.
+- `software_index.json` — full software catalogue containing detailed program, version, variant, item and reference records.
+
+The `sidecar_web.py` web server uses the compact indexes to find and display matching programs. It uses the full catalogue to retrieve detailed information when a program is selected, including versions, downloadable files, package candidates and source references.
+
+The compact indexes do not need to contain version records. The full `software_index.json` must retain the detailed information required for program selection, source presentation and downloads.
+
+The implementation now distinguishes between three related operations:
+
+1. Finding a program using its platform index.
+2. Displaying program details, file information and catalogue references.
+3. Selecting and downloading an appropriate individual file or complete package.
+
+These operations use the same underlying catalogue but serve different purposes. A reference displayed for information is not necessarily the URL used by the download handler.
+
+## 2. Index structure and generation
+
+The compact EPOC16 and EPOC32 indexes are derived from the full software catalogue.
+
+Each compact index record retains the following fields:
+
+- `id` — program identifier used to associate the compact record with its full catalogue record.
+- `name` — program name, used for browser search and display.
+- `platforms` — supported platform information.
+- `tags` — programme categories or descriptive tags.
+- `runtimes` — runtime requirements or associations.
+- `kinds` — software or package classifications.
+
+The compact indexes omit `versions` to reduce their size and avoid duplicating detailed information held in the full catalogue.
+
+The master catalogue used to generate the documented indexes contained 4,880 records. The resulting indexes contain:
+
+| Index | Records |
+|---|---:|
+| EPOC16 | 2,797 |
+| EPOC32 | 2,083 |
+| Total | 4,880 |
+
+The two indexes contain no overlapping program IDs, and every record in the source catalogue was accounted for. The generated records preserve the values of the retained fields and are sorted by program name.
+
+**Provenance:** these counts and validation results apply to indexes generated from the saved master catalogue dated 28 October 2026. They do not establish that the indexes include changes made to the upstream catalogue after that snapshot.
+
+## 3. How `sidecar_web.py` selects programs
+
+### Step 1 — Load the platform index
+
+The server loads the compact index corresponding to the platform selected by the user:
+
+- EPOC16 selection loads `epoc16_index.json`.
+- EPOC32 selection loads `epoc32_index.json`.
+
+The index supplies the program names and identifiers needed for searching and displaying results.
+
+### Step 2 — Filter by program name
+
+The browser search filters the selected platform's records using the program-name query.
+
+The search-result list displays program names as links to their detail pages. Language and version information is not appended to each entry in this list by the current implementation.
+
+The platform selector, name filtering and result links are retained.
+
+### Step 3 — Retrieve the full program record
+
+When the user selects a program, the server looks up its ID in `software_index.json`.
+
+This retrieves the full record, including versions, variants, items and references.
+
+Using the ID avoids relying on a program name alone to identify the correct record when names are similar.
+
+### Step 4 — Display program details
+
+The program-detail page displays the program name and summary information, including platform, runtime and language.
+
+It then presents the available file entries, their version and file information, download options, and an expandable **Sources and archive paths** section when catalogue references are available.
+
+Language information is displayed at two levels:
+
+- A program-level language summary.
+- A language label for each individual file entry.
+
+The program-level summary and individual-file labels are derived using related but distinct logic. They should not be interpreted as a guarantee that every file in a program's catalogue record has been conclusively identified by language.
+
+## 4. How language and version information is determined
+
+Language and version information is extracted from the full catalogue, not from the compact indexes.
+
+### 4.1 Version identification
+
+The implementation reads version labels from the actual `versions` records in `software_index.json`.
+
+It does not derive version numbers from filenames.
+
+Where the catalogue contains a version labelled `Unknown`, that value is preserved rather than replaced with an invented version number. Where a version label is absent, the implementation uses `Unknown` as a fallback.
+
+### 4.2 Language identification
+
+The implementation uses a defined set of language names and aliases. These include common native-language forms, such as:
+
+- French / Français
+- German / Deutsch
+- Spanish / Español
+- Italian / Italiano
+- Dutch / Nederlands
+
+Other configured languages include Portuguese, Swedish, Norwegian, Danish, Finnish, Russian, Polish, Czech, Hungarian, Greek, Turkish, Japanese, Chinese and Korean.
+
+For individual catalogue items, the implementation examines the item's name and filename. It also recognises certain explicit language codes in filenames, such as `FR-...` and filenames ending in a language code in an expected edition pattern.
+
+Where these methods do not identify a language, the implementation examines language-specific path components in the item's own references. This matching is deliberately constrained to avoid treating unrelated words elsewhere in an archive path as reliable evidence.
+
+Certain shared system-dependency records are explicitly excluded from language identification because their presence does not establish the language of a program.
+
+### 4.3 Identified languages and fallback labels
+
+The language labels need to be interpreted carefully.
+
+Where catalogue evidence identifies a language, the implementation displays the corresponding language name.
+
+Where the program-level language analysis cannot identify any language, the detail-page summary uses the fallback **English likely**. Individual file entries also use `English likely` when their item-level language detection returns no identified language.
+
+This is a fallback label, not a confirmed catalogue fact. It must not be described as a positive language identification.
+
+The language/version-pair helper can separately represent an unidentified language as **Language not identified**. That distinction is important when interpreting local test results: the helper's output and the labels ultimately rendered on the detail page are not identical in every fallback case.
+
+### 4.4 Grouping and limitations
+
+Language/version pairs are deduplicated so that identical pairs are not repeated unnecessarily.
+
+Language identification is based on textual evidence and a finite alias list. It is not a complete linguistic analysis. An unrecognised abbreviation, an ambiguous filename or missing language-specific information may prevent identification.
+
+The language labels are intended to help users navigate the catalogue, not to certify the language of every installer or resource file.
+
+## 5. Sources and references on the program-detail page
+
+### 5.1 Purpose
+
+The full catalogue can contain multiple references associated with an item, including:
+
+- Source information pages.
+- Complete ZIP packages and other archives.
+- Individual program files.
+- Files contained within archives.
+- Archive paths and collection-specific references.
+
+The updated implementation collects the references associated with each displayed file entry and presents them in an expandable section headed:
+
+**Sources and archive paths (downloads may exceed 10MB, particularly ISOs); aggregated references**
+
+The section is intended to help users understand where a file or package comes from and how individual files relate to a larger archive or collection.
+
+It is a presentation of catalogue metadata, not an independent verification of the source or the contents of a downloadable file.
+
+### 5.2 Aggregation of references
+
+The program-detail handler builds file entries from the full catalogue.
+
+Where multiple catalogue entries are combined into one displayed file row, their source references are aggregated. Duplicate references are identified using their name and URL, so repeated references are not unnecessarily displayed multiple times.
+
+This is significant because a displayed file row may represent information collected from more than one catalogue entry.
+
+The source section therefore represents the references associated with the displayed item after aggregation. It should not be assumed that every reference belongs exclusively to one original version or variant.
+
+### 5.3 Source-page grouping
+
+The implementation recognises certain web references as source information pages. In particular, URLs containing `/details/` are treated as source pages; other web references that are not identified as archive or individual-program-file links may also be classified as source pages.
+
+A source page is displayed as a linked heading beginning with **Source:**.
+
+Subsequent references are grouped beneath that heading until another source page starts a new group. References that cannot be associated with a source-page heading can appear under **Other references**.
+
+The grouping preserves catalogue order and uses the names and URLs supplied by the catalogue. It is a practical display hierarchy rather than a guarantee that the original catalogue's relationships are complete or unambiguous.
+
+### 5.4 Archive and package references
+
+References recognised as archives or packages are displayed with a descriptive type and their catalogue name.
+
+Recognised archive extensions include ZIP, ISO, 7z, RAR, TAR, GZ, BZ2 and XZ.
+
+Where URLs are available, archive and package references are presented as links. The implementation does not impose the 10 MB individual-file link restriction on these archive links.
+
+The page warns that downloads may be large, particularly ISO images. The size warning is important because an archive link may lead to a substantial download even when it is useful for identifying the source of an individual program.
+
+References may also be organised hierarchically, with archive entries acting as parents for associated files or paths. The result depends on the reference names, URLs and their ordering in the catalogue.
+
+### 5.5 Individual program-file links and size restrictions
+
+Individual program-file references are treated differently from archive links.
+
+For this purpose, the implementation recognises .sis, .app and .opa file extensions.
+
+An individual-program-file reference is displayed as a clickable link only when the catalogue reports a size for the displayed item that is known, non-negative and no greater than 10 MiB (10 × 1024 × 1024 bytes).
+
+If the size is unknown or exceeds this threshold, the reference remains visible as information, but its direct link is hidden. The page explains that the individual-file link is hidden because the size is unknown or exceeds 10 MB.
+
+This is a conservative presentation rule. It does not establish that every file below the threshold is safe, nor does it prove that a hidden file is unavailable for download through another route.
+
+References to files inside archives are not necessarily direct downloadable files. The displayed type and link treatment depend on the reference's name, URL and classification.
+
+### 5.6 What the source section does not do
+
+The source-reference section is display-only.
+
+It does not select the preferred installer, choose the package download URL, change the file hash or determine the file returned by the download handler.
+
+The displayed source URL and the URL selected for an actual download may differ. The source section is intended to provide provenance and context, while download selection uses the handler's own matching rules.
+
+The references are catalogue-provided metadata. Their display does not independently verify that a URL still works, that a file is authentic, or that an archive contains the expected program.
+
+### 6. Package selection and download behaviour
+
+### 6.1 Individual-file downloads
+
+The existing download handler uses the program ID and file hash to find the appropriate item in the full catalogue.
+
+It then applies the relevant download rules for that item. The source-reference display does not replace this lookup or bypass the existing download handler.
+
+Individual-file handling continues to distinguish SIS installers from APP and OPA files. The detail page provides file-specific instructions where a downloaded file needs to be renamed to its original extension.
+
+### 6.2 Complete ZIP package selection
+
+The updated package-selection logic improves how the server chooses a complete ZIP package for an installer.
+
+The helper _find_package_archive() compares normalised names and reference paths to find a ZIP associated with the selected item. It uses several forms of evidence:
+
+An archive name matching the installer filename stem is the strongest match.
+
+A closely matching archive name can also qualify.
+
+Where an installer is referenced through a directory path, the directory name can provide an alias for a differently named ZIP.
+
+A recognised nested ZIP on Archive.org can receive a preference over an otherwise equally matched top-level reference.
+
+The helper avoids treating arbitrary files inside archives as complete package downloads. Its matching logic is intended to avoid selecting an unrelated ZIP merely because it appears in the same program record.
+
+This is a heuristic based on catalogue names and paths. It does not inspect the contents of every archive to prove that it contains the selected installer.
+
+The package-selection helper considers ZIP candidates; the presence of other archive formats in the source-reference section does not mean that all those formats are eligible for the complete-package download handler.
+
+### 6.3 SIS safeguard
+
+The package download handler retains a safeguard that skips a candidate item when its references include a URL ending in .sis.
+
+This prevents the package-download route from offering a complete package for an item that has an SIS installer reference under the existing selection rules.
+
+The safeguard is part of the download handler's selection logic, not the source-reference display.
+
+### 6.4 Recommended package link
+
+Where a complete package is available through the handler, the program-detail page presents the link:
+
+DOWNLOAD COMPLETE .ZIP PACKAGE (RECOMMENDED)
+
+The recommendation reflects the intended preference for a complete package where appropriate. It does not mean that a package is available for every catalogue item.
+
+If no suitable package can be identified, the handler must not invent a package URL. The individual download options and error handling remain governed by the existing handler logic.
+
+### 6.5 Separation of source display and download selection
+
+Operation
+
+Data or logic used
+
+Purpose
+
+Platform selection
+
+User's platform choice
+
+Select EPOC16 or EPOC32
+
+Program-name search
+
+Compact platform index
+
+Find matching programs
+
+Program identification
+
+Program ID
+
+Retrieve the correct full catalogue record
+
+Language display
+
+Full catalogue and language-matching helpers
+
+Provide language context
+
+Source presentation
+
+Aggregated item references
+
+Display source pages, archives and file references
+
+Individual download
+
+Full catalogue, file hash and handler rules
+
+Resolve a specific downloadable item
+
+Complete ZIP selection
+
+_find_package_archive() and reference matching
+
+Select a ZIP associated with the chosen installer
+
+The compact indexes remain suitable for their intended role. The full catalogue remains essential for program details, source references and download selection.
+
+### 7. Validation performed
+
+Validation must distinguish between local tests, deployment checks and end-to-end testing.
+
+### 7.1 Previously documented language/version tests
+
+The earlier local validation reported that the updated script passed Python syntax compilation:
+
+python -m py_compile sidecar_web.py
+
+It also reported eight language/version checks and three local HTTP rendering tests passing.
+
+The language/version tests covered representative French and German resources, multilingual programs, native-language names, unknown language handling and program-name filtering.
+
+The HTTP tests covered representative searches for PsiDat French Resources, TrueTerm and Clock5, checking the returned HTML for expected language/version information.
+
+These results support the tested language/version behaviours. They do not establish that every catalogue record is correctly classified or that all source and download paths work.
+
+### 7.2 Changes included in the 30 October 2026 commit
+
+The GitHub commit 1c0c408, titled Update software indexes and package selection, includes changes to:
+
+sidecar_web.py
+
+epoc16_index.json
+
+epoc32_index.json
+
+The Python changes include the structured source-reference display, per-item language presentation, language/version helper functions and improved ZIP package matching.
