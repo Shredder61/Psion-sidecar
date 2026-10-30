@@ -43,11 +43,13 @@ All three index files are included in the repository and should be kept up to da
 
 ## Downloading software
 
-Where a complete archive or package is available, Sidecar presents a **complete-package ZIP download**, which is the preferred option. This can be particularly useful when the software consists of multiple files.
+Where a complete archive or package is available, Sidecar presents a **complete-package ZIP download**, which is the recommended option. This can be particularly important when the software consists of multiple files.
 
 Individual downloads are also available when supported by the catalogue entry. Depending on the entry, these may include `.SIS` installer packages or individual `.APP` and `.OPA` files.
 
 The available download options depend on the software archive and the links recorded in the catalogue.
+
+For individual program-file references, Sidecar applies a size rule: a direct link is displayed only when the file size is known and no greater than 10 MB. Larger files and files of unknown size (e.g., to an ISO) may remain visible as references without a direct link.
 
 ## Saving downloads on a Psion
 
