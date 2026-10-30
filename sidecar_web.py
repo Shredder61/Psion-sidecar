@@ -3,10 +3,11 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import html
-from urllib.parse import urlparse, parse_qs, quote
+from urllib.parse import urlparse, unquote, parse_qs, quote
 import re
 from urllib.request import Request, urlopen
 import json
+from functools import lru_cache
 
 
 HOST = "0.0.0.0"
@@ -141,6 +142,211 @@ def _find_package_archive(item_filename, references):
 BASE_DIR = Path(__file__).resolve().parent
 ROOT = BASE_DIR / "crosswords"
 
+# Language names and common native-language spellings seen in software records.
+# Keep this deliberately explicit: do not guess language from arbitrary suffixes.
+_LANGUAGE_ALIASES = {
+    "English": ("english", "englisch", "ingles", "inglés", "inglese", "eng"),
+    "French": ("french", "français", "francais", "francese", "französisch", "franzosisch", "fr"),
+    "German": ("german", "deutsch", "deutsche", "tedesco", "alemán", "aleman", "de"),
+    "Spanish": ("spanish", "español", "espanol", "spagnolo", "spanisch", "castellano", "es"),
+    "Italian": ("italian", "italiano", "italienisch", "it"),
+    "Dutch": ("dutch", "nederlands", "neerlandés", "neerlandes", "hollands", "nl"),
+    "Portuguese": ("portuguese", "português", "portugues", "portoghese", "pt"),
+    "Swedish": ("swedish", "svenska", "schwedisch", "sv"),
+    "Norwegian": ("norwegian", "norsk", "norwegisch", "no"),
+    "Danish": ("danish", "dansk", "dänisch", "daenisch", "da"),
+    "Finnish": ("finnish", "suomi", "finnisch", "fi"),
+    "Russian": ("russian", "русский", "russisch", "ru"),
+    "Polish": ("polish", "polski", "polnisch", "pl"),
+    "Czech": ("czech", "čeština", "cestina", "tschechisch", "cz"),
+    "Hungarian": ("hungarian", "magyar", "ungarisch", "hu"),
+    "Greek": ("greek", "ελληνικά", "griechisch", "el"),
+    "Turkish": ("turkish", "türkçe", "turkce", "tr"),
+    "Japanese": ("japanese", "日本語", "jp", "ja"),
+    "Chinese": ("chinese", "中文", "zh"),
+    "Korean": ("korean", "한국어", "ko"),
+}
+
+
+def _language_matches(text):
+    """Return canonical languages explicitly named in text, in stable order."""
+    text = str(text or "").casefold()
+    found = []
+    for language, aliases in _LANGUAGE_ALIASES.items():
+        for alias in aliases:
+            # The item-aligned audit excludes ambiguous short codes.
+            if len(alias) <= 2:
+                continue
+            pattern = r"(?<![a-z])" + re.escape(alias) + r"(?![a-z])"
+            if re.search(pattern, text, re.IGNORECASE):
+                found.append(language)
+                break
+    return found
+
+# Program IDs classified by the item-aligned audit as shared system dependencies.
+_SHARED_LANGUAGE_EXCLUSIONS = {
+    "uid/0x10000b90",  # Systinfo OPX
+    "uid/0x10000405",  # Sysram1 OPX
+    "uid/0x10000002",  # SysRAM1.opx
+    "uid/0x00000000",  # SysRam1.opx
+    "uid/0x10000079",  # SysRAM1 application
+    "uid/0x00003039",  # sysram1
+}
+
+
+def _languages_for_catalogue_item(program_id, item):
+    """Return languages supported by this specific catalogue item only."""
+    from urllib.parse import unquote_plus
+
+    if str(program_id) in _SHARED_LANGUAGE_EXCLUSIONS:
+        return []
+
+    item_text = " ".join((
+        str(item.get("name", "") or ""),
+        str(item.get("filename", "") or ""),
+    ))
+    found = _language_matches(item_text)
+    if found:
+        return found
+
+    short_codes = {
+        "EN": "English", "FR": "French", "DE": "German", "IT": "Italian",
+        "ES": "Spanish", "NL": "Dutch", "PT": "Portuguese", "SV": "Swedish",
+        "NO": "Norwegian", "DA": "Danish", "FI": "Finnish", "RU": "Russian",
+        "PL": "Polish", "CZ": "Czech", "HU": "Hungarian", "EL": "Greek",
+        "GR": "Greek", "TR": "Turkish", "JA": "Japanese", "JP": "Japanese",
+        "ZH": "Chinese", "KO": "Korean",
+    }
+    filename = str(item.get("filename", "") or "").replace("\\", "/").rsplit("/", 1)[-1]
+    stem = filename.rsplit(".", 1)[0]
+    match = re.match(r"^([A-Z]{2})[-_]", stem, re.IGNORECASE)
+    if match and match.group(1).upper() in short_codes:
+        return [short_codes[match.group(1).upper()]]
+    match = re.search(r"(?:[-_]|[0-9])([A-Z]{2})$", stem, re.IGNORECASE)
+    if match and match.group(1).upper() in short_codes:
+        return [short_codes[match.group(1).upper()]]
+
+    def path_languages(path_text):
+        results = []
+        decoded = unquote_plus(str(path_text or "")).replace("\\", "/")
+        for component in [part for part in decoded.split("/") if part]:
+            for language in _language_matches(component):
+                if language not in results:
+                    results.append(language)
+        return results
+
+    references = item.get("references", item.get("reference", [])) or []
+    results = []
+    normal_stem = re.sub(r"[^a-z0-9]", "", stem.casefold())
+    for reference in references:
+        ref_url = str(reference.get("url", "") or "")
+        if not ref_url:
+            continue
+        path = unquote_plus(str(urlparse(ref_url).path)).replace("\\\\", "/")
+        normal_path = re.sub(r"[^a-z0-9]", "", path.casefold())
+        if normal_stem and len(normal_stem) >= 4 and normal_stem not in normal_path:
+            continue
+        for language in path_languages(path):
+            if language not in results:
+                results.append(language)
+    return results
+
+
+def _program_language_versions(program):
+    """Return language/version pairs supported by the specific catalogue items.
+
+    Evidence is evaluated per item: item metadata first, then language-specific
+    path components in that item's own references. Archive titles and unrelated
+    reference names are deliberately not used as evidence.
+    """
+    from urllib.parse import unquote_plus
+
+    program_id = str(program.get("id", "") or "")
+    result = []
+    seen = set()
+
+    # Explicit short-code patterns are accepted only in filenames with clear
+    # language-edition structure (e.g. FR-ISP.SIS, MSGSUITE10FR.ZIP).
+    short_codes = {
+        "EN": "English", "FR": "French", "DE": "German", "IT": "Italian",
+        "ES": "Spanish", "NL": "Dutch", "PT": "Portuguese", "SV": "Swedish",
+        "NO": "Norwegian", "DA": "Danish", "FI": "Finnish", "RU": "Russian",
+        "PL": "Polish", "CZ": "Czech", "HU": "Hungarian", "EL": "Greek",
+        "GR": "Greek", "TR": "Turkish", "JA": "Japanese", "JP": "Japanese",
+        "ZH": "Chinese", "KO": "Korean",
+    }
+
+    def explicit_filename_code(text):
+        text = str(text or "").replace("\\", "/").rsplit("/", 1)[-1]
+        stem = text.rsplit(".", 1)[0]
+        # A leading code followed by a separator, or a trailing code preceded
+        # by a separator/digit, is specific enough to indicate an edition.
+        m = re.match(r"^([A-Z]{2})[-_]", stem, re.IGNORECASE)
+        if m and m.group(1).upper() in short_codes:
+            return [short_codes[m.group(1).upper()]]
+        m = re.search(r"(?:[-_]|[0-9])([A-Z]{2})$", stem, re.IGNORECASE)
+        if m and m.group(1).upper() in short_codes:
+            return [short_codes[m.group(1).upper()]]
+        return []
+
+    def path_component_languages(path_text):
+        found = []
+        # Decode escaped archive-internal paths and plus-encoded spaces.
+        decoded = unquote_plus(str(path_text or "")).replace("\\", "/")
+        for component in [c for c in decoded.split("/") if c]:
+            # Long, explicit language names only; do not scan whole archive
+            # paths where a language word may refer to unrelated content.
+            for language in _language_matches(component):
+                if language not in found:
+                    found.append(language)
+        return found
+
+    for version in program.get("versions", []) or []:
+        version_label = str(version.get("version") or "Unknown").strip() or "Unknown"
+        version_languages = []
+
+        for variant in version.get("variants", []) or []:
+            for item in variant.get("items", []) or []:
+                for language in _languages_for_catalogue_item(program_id, item):
+                    if language not in version_languages:
+                        version_languages.append(language)
+
+        languages = version_languages or ["Language not identified"]
+        for language in languages:
+            pair = (language, version_label)
+            if pair not in seen:
+                seen.add(pair)
+                result.append(pair)
+
+    if not result:
+        result.append(("Language not identified", "Unknown"))
+    return result
+
+
+@lru_cache(maxsize=1)
+def _load_software_catalogue():
+    """Load the full catalogue once for version and language annotations."""
+    with open(BASE_DIR / "software_index.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@lru_cache(maxsize=1)
+def _software_catalogue_by_id():
+    """Index the full software catalogue by program ID."""
+    return {
+        str(program.get("id", "")): program
+        for program in _load_software_catalogue()
+    }
+
+
+@lru_cache(maxsize=8192)
+def _cached_program_language_versions(program_id):
+    """Cache language/version annotations for each catalogue program."""
+    program = _software_catalogue_by_id().get(str(program_id))
+    if program is None:
+        return (("Language not identified", "Unknown"),)
+    return tuple(_program_language_versions(program))
+
 class SidecarHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
@@ -270,9 +476,11 @@ class SidecarHandler(SimpleHTTPRequestHandler):
 
             rows = []
 
-            for program in programs:
-                name = html.escape(program.get("name", ""))
-                program_id = html.escape(str(program.get("id", "")))
+            for indexed_program in programs:
+                name = html.escape(indexed_program.get("name", ""))
+                program_id = html.escape(
+                    str(indexed_program.get("id", "")), quote=True
+                )
 
                 rows.append(
                     '<p><a href="/psionprogram?id='
@@ -415,6 +623,14 @@ Filter:
                 program.get("runtimes", [])
             )
 
+            language_versions = _cached_program_language_versions(program_id)
+            languages = ", ".join(dict.fromkeys(
+                language for language, _version in language_versions
+                if language != "Language not identified"
+            ))
+            if not languages:
+                languages = "English likely"
+
             unique_files = {}
 
             for version in program.get("versions", []):
@@ -528,8 +744,12 @@ Filter:
                             "size": size,
                             "sha256": sha256,
                             "kind": item.get("kind", ""),
+                            "languages": ", ".join(_languages_for_catalogue_item(program_id, item)) or "English likely",
                             "download_url": download_url,
-                            "package_url": package_url
+                            "package_url": package_url,
+                            "references": list(
+                                item.get("references", item.get("reference", [])) or []
+                            )
                         }
 
                         existing = unique_files.get(key)
@@ -539,6 +759,21 @@ Filter:
                             unique_files[key] = candidate
 
                         else:
+                            # Preserve the source references from every catalogue
+                            # entry represented by this deduplicated file row.
+                            existing_references = existing.setdefault("references", [])
+                            known_references = {
+                                (str(ref.get("name", "")), str(ref.get("url", "") or ""))
+                                for ref in existing_references
+                            }
+                            for reference in candidate.get("references", []):
+                                reference_key = (
+                                    str(reference.get("name", "")),
+                                    str(reference.get("url", "") or "")
+                                )
+                                if reference_key not in known_references:
+                                    existing_references.append(reference)
+                                    known_references.add(reference_key)
 
                             if (
                                 candidate["download_url"]
@@ -615,6 +850,8 @@ Filter:
                     + html.escape(version_number)
                     + "<br>"
                     + html.escape(display_kind)
+                    + "<br>Language: "
+                    + html.escape(item.get("languages") or "English likely")
                     + (
                         "<br>" + html.escape(display_size)
                         if display_size
@@ -634,7 +871,7 @@ Filter:
                     rows.append(
                         '<br><a href="'
                         + html.escape(package_href, quote=True)
-                        + '">DOWNLOAD COMPLETE PACKAGE (.ZIP) PREFERRED</a>'
+                        + '">DOWNLOAD COMPLETE .ZIP PACKAGE (RECOMMENDED)</a>'
                     )
 
                 if item["download_url"]:
@@ -702,6 +939,151 @@ Filter:
                         + '</small>'
                     )
 
+                # Show useful source references without exposing direct links to
+                # potentially very large archive downloads. This is display-only:
+                # the existing download-selection logic above remains unchanged.
+                references = item.get("references", []) or []
+                if references:
+                    rendered_refs = []
+                    item_size = item.get("size")
+                    try:
+                        item_size = int(item_size) if item_size is not None else None
+                    except (TypeError, ValueError):
+                        item_size = None
+                    max_reference_file_bytes = 10 * 1024 * 1024
+                    archive_extensions = (".zip", ".iso", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz")
+                    program_extensions = (".sis", ".app", ".opa")
+
+                    # Preserve catalogue order. A source-page reference begins a
+                    # source group; archive references become parents for the
+                    # following file/path references until another archive appears.
+                    source_groups = []
+                    current_group = {"title": "Other references", "source_url": "", "entries": []}
+                    source_groups.append(current_group)
+                    current_archive = None
+                    top_archive = None
+
+                    for reference in references:
+                        reference_name = str(reference.get("name", "") or "").strip()
+                        reference_url = str(reference.get("url", "") or "").strip()
+                        safe_url = urlparse(reference_url)
+                        decoded_path = unquote(safe_url.path)
+                        decoded_path_lower = decoded_path.lower()
+                        if not reference_name:
+                            reference_name = reference_url or "Unnamed reference"
+                        lowered_name = unquote(reference_name).lower()
+                        is_nested_archive_path = (
+                            "/download/" in safe_url.path.lower()
+                            and any(ext in decoded_path_lower for ext in archive_extensions)
+                        )
+                        is_program_file = (
+                            lowered_name.endswith(program_extensions)
+                            or decoded_path_lower.endswith(program_extensions)
+                        )
+                        is_archive_reference = (
+                            any(lowered_name.endswith(ext) for ext in archive_extensions)
+                            or any(decoded_path_lower.endswith(ext) for ext in archive_extensions)
+                        )
+                        is_web_url = bool(reference_url and safe_url.scheme in ("http", "https"))
+                        is_source_page = is_web_url and (
+                            "/details/" in safe_url.path.lower()
+                            or not is_archive_reference and not is_program_file
+                        )
+
+                        link_html = "<em>URL not available in catalogue</em>"
+                        if is_web_url and is_program_file:
+                            if item_size is not None and 0 <= item_size <= max_reference_file_bytes:
+                                link_html = (
+                                    '<a href="' + html.escape(reference_url, quote=True)
+                                    + '" target="_blank" rel="noopener noreferrer">'
+                                    + html.escape(reference_url) + '</a>'
+                                )
+                                reference_type = "Individual program file"
+                            else:
+                                reference_type = "Program file"
+                                link_html = "<em>Individual-file link hidden: file size is unknown or exceeds 10 MB.</em>"
+                        elif is_web_url and is_archive_reference:
+                            reference_type = "Archive or package"
+                            link_html = (
+                                '<a href="' + html.escape(reference_url, quote=True)
+                                + '" target="_blank" rel="noopener noreferrer">'
+                                + html.escape(reference_url) + '</a>'
+                            )
+                        elif is_web_url and is_nested_archive_path:
+                            reference_type = "File inside archive"
+                            link_html = "<em>Link hidden: the referenced file is not an individual program file.</em>"
+                        elif is_source_page:
+                            reference_type = "Source information page"
+                            link_html = (
+                                '<a href="' + html.escape(reference_url, quote=True)
+                                + '" target="_blank" rel="noopener noreferrer">'
+                                + html.escape(reference_url) + '</a>'
+                            )
+                        elif is_web_url:
+                            reference_type = "Source page or other reference"
+                            link_html = (
+                                '<a href="' + html.escape(reference_url, quote=True)
+                                + '" target="_blank" rel="noopener noreferrer">'
+                                + html.escape(reference_url) + '</a>'
+                            )
+                        else:
+                            reference_type = "Reference"
+
+                        # A source page starts a new group. Do not display it as
+                        # a loose file entry; show it as the group's linked heading.
+                        if is_source_page:
+                            title = reference_name
+                            current_group = {"title": title, "source_url": reference_url, "entries": []}
+                            source_groups.append(current_group)
+                            current_archive = None
+                            top_archive = None
+                            continue
+
+                        entry = {"name": reference_name, "type": reference_type,
+                                 "link": link_html, "archive": is_archive_reference,
+                                 "is_nested_path": is_nested_archive_path}
+                        if is_archive_reference:
+                            # A path such as Coll/foo.zip is nested inside the
+                            # collection archive. Multiple such packages are siblings
+                            # under that collection; their following files nest below
+                            # the most recently listed package.
+                            entry["nested_archive"] = "/" in unquote(reference_name).replace("\\", "/")
+                            if entry["nested_archive"] and top_archive is not None:
+                                top_archive.setdefault("children", []).append(entry)
+                            else:
+                                current_group["entries"].append(entry)
+                                top_archive = entry
+                            current_archive = entry
+                        else:
+                            if current_archive is not None:
+                                current_archive.setdefault("children", []).append(entry)
+                            else:
+                                current_group["entries"].append(entry)
+
+                    def render_reference(entry):
+                        label = '<strong>' + html.escape(entry["type"]) + '</strong><br>' + html.escape(entry["name"])
+                        body = label + '<br>' + entry["link"]
+                        children = entry.get("children", [])
+                        if children:
+                            body += '<ul>' + ''.join('<li>' + render_reference(child) + '</li>' for child in children) + '</ul>'
+                        return body
+
+                    group_html = []
+                    for group in source_groups:
+                        if not group["entries"] and not group["source_url"]:
+                            continue
+                        title = html.escape(group["title"])
+                        if group["source_url"]:
+                            title = '<a href="' + html.escape(group["source_url"], quote=True) + '" target="_blank" rel="noopener noreferrer">' + title + '</a>'
+                        entries_html = ''.join('<li>' + render_reference(entry) + '</li>' for entry in group["entries"])
+                        group_html.append('<li><strong>Source: </strong>' + title + (('<ul>' + entries_html + '</ul>') if entries_html else '') + '</li>')
+
+                    rows.append(
+                        '<details><summary>Sources and archive paths (downloads may exceed 10MB, particularly ISOs); aggregated references</summary><ul>'
+                        + ''.join(group_html)
+                        + '</ul><small>Archive links are shown when a URL is available; downloads may exceed 10MB (particularly ISOs). Individual program-file links are shown only when the catalogue reports a size of 10 MB or less.</small></details>'
+                    )
+
             if not rows:
                 rows.append(
                     "<p>No files found.</p>"
@@ -719,7 +1101,8 @@ Filter:
 
 <p>
 Platform: {html.escape(platforms)}<br>
-Runtime: {html.escape(runtimes)}
+Runtime: {html.escape(runtimes)}<br>
+Language: {html.escape(languages)}
 </p>
 
 <hr>
