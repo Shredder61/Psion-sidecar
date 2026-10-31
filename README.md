@@ -204,7 +204,7 @@ Review a program's available downloads, download a package, and install it on th
 
 ![Installing chess software on the Psion](docs/images/software-chess-install.jpg)
 
-The program details page shows both the recommended complete ZIP package and the individual SIS installer.
+The program details page shows both the recommended complete ZIP package and the individual SIS installer. Note that the program package might include other essential program files or even just the readme.txt file, so where available, the .ZIP file is the recommended choice.
 
 ![Downloading PhoneMan software](docs/images/software-phoneman-download.jpg)
 
