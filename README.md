@@ -104,9 +104,9 @@ If no output directory is specified, the program uses its configured default.
 
 ## How crosswords are retrieved
 
-The downloader uses the Guardian's accessible crossword pages:
+The downloader uses the Guardian's accessible crossword pages, e.g.:
 
-<https://www.theguardian.com/crosswords/accessible/>
+<https://www.theguardian.com/crosswords/accessible/quick/10271>
 
 It deliberately uses these pages rather than the Guardian's JSON/API interface.
 
