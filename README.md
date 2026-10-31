@@ -196,8 +196,6 @@ Search the catalogue and filter results by platform or program name.
 
 ![Searching EPOC32 software](docs/images/software-search-epoc32.jpg)
 
-![Searching the catalogue for chess software](docs/images/software-search-chess.jpg)
-
 Review a program's available downloads, download a package, and install it on the Psion.
 
 ![Chess software download options](docs/images/software-chess-download.jpg)
