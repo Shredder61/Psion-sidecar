@@ -1,22 +1,24 @@
 # Psion Sidecar
 
-Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together Guardian crossword downloads (native or RMR / FatCatz format), access to your locally stored crossword files, Psion Community software browsing and a Psion-friendly search page. 
+Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together access to the Psion Community software browsing, Psion-friendly search pages and news feeds, and Guardian crossword downloads (native or RMR / FatCatz format), all to download and access from the Psion. 
 
-The Sidecar can be accessed from a Psion using a compatible browser such as Opera or PsiWeb. The Raspberry Pi provides the web server and connects to the external services used by the project. Note that, when searching for Psion software, the first program search may take a little longer while the local cache is created.
+The Sidecar can be accessed using a compatible browser such as Opera or PsiWeb or you can access it from any other computer. The Raspberry Pi provides the web server and connects to the external services used by the project. Note that, when searching for Psion software, the first program search may take a little longer while the local cache is created. 
 
-The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python. This allows you to download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`.
+The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python so you can download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`. However, with the Raspberry Pi implementation, all of this is integrated.
 
-Thanks to Kian (https://www.kianryan.co.uk) and Daniel (https://github.com/danieledge), whose work on connectivity inspired me to get this project moving. My two mint-condition Psions—a special-edition green anniversary Psion 5 and a Psion 5mx—had been sitting in a cupboard for around a decade. In my situation, I used Kian's sidecar settings for the Modem/Comms and now use Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers. However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it), I choose to add a separate Raspberry Pi on my network (which also displays shared calendars and 2Do lists on an e-Ink screen) to host a Psion "Home page", which gives the Psion access to the Psion Community software hyperlinks, news/search hyperlinks, and The Guardian crossword puzzles. Importantly, and a main driver for doing this work, is that the Psion searches the Pi's local catalogue using compressed local indexes and does not need to commit large data downloads from the repositories, other for the program files themselves, which are usually small.
+Thanks to Kian (https://www.kianryan.co.uk), Daniel (https://github.com/danieledge), Jason (https://github.com/jbmorley), and Tom (https://github.com/tomsci) whose work on connectivity and software aggregation inspired me to get this project moving. In my situation, I used Kian's sidecar settings for the Modem/Comms and now use Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers. 
+
+However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it locally), I choose to add a separate Raspberry Pi on my network (which also displays shared calendars and 2Do lists on an e-Ink screen) to host a Psion "Home page". This gives the Psion access to the Psion Community software hyperlinks, news/search hyperlinks, and The Guardian crossword puzzles. Importantly, and a main driver for doing this work, is that the Psion searches the Pi's local software catalogue using compressed local indexes and hence does not need to commit large data downloads from the repositories, other for the program files themselves, which are usually quite small.
 
 ## What's included
 
+- A Psion Community software catalogue interface, including filtered program searches and download links.
+- Psion-friendly web resources, including access to FrogFind.
+- An example systemd service for starting the server automatically when the Raspberry Pi boots.
 - Guardian Quick and Cryptic crossword download requests.
 - Direct downloads of original Guardian crossword text files.
 - On-demand conversion of downloaded crosswords to RMR / FatCatz format on the Raspberry Pi.
 - A local crossword archive with links to both original and RMR-converted files.
-- A Psion Community software catalogue interface, including filtered program searches and download links.
-- Psion-friendly web resources, including access to FrogFind.
-- An example systemd service for starting the server automatically when the Raspberry Pi boots.
 - A separate Psion-side OPL conversion workflow for users who prefer to convert crossword files on the Psion.
 
 The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar web server uses Python's standard library and does not require third-party Python packages.
@@ -31,7 +33,7 @@ The Sidecar web interface is designed for simple, text-oriented browsing on olde
 
 ## Psion Community software Sidecar downloader
 
-Selecting the Psion Community software link on the Sidecar homepage opens a search interface. You can search the software catalogue and access available downloads for matching software.
+Selecting the Psion Community software link on the Sidecar homepage opens a search interface where you can filter for EPOC16/EPOC32 software and then search the software catalogue and access available downloads for matching software ready for download.
 
 The catalogue uses three JSON index files in the project directory:
 
@@ -39,7 +41,7 @@ The catalogue uses three JSON index files in the project directory:
 - `epoc32_index.json` — EPOC32 software index.
 - `software_index.json` — main software catalogue index.
 
-All three index files are included in the repository and should be kept up to date.
+All three index files are included in the repository and should be kept up to date. At the current count, the index contains 4,880 programs.
 
 ## Downloading software
 
@@ -49,15 +51,13 @@ Individual downloads are also available when supported by the catalogue entry. D
 
 The available download options depend on the software archive and the links recorded in the catalogue.
 
-For individual program-file references, Sidecar applies a size rule: a direct link is displayed only when the file size is known and no greater than 10 MB. Larger files and files of unknown size (e.g., to an ISO) may remain visible as references without a direct link.
+For individual program-file references, Sidecar applies a size rule: a direct link is displayed only when the file size is known and no greater than 10 MB. Larger files and files of unknown size (e.g., to an ISO) may remain visible as references but without a direct link.
 
 ## Saving downloads on a Psion
 
 When downloading through a Psion browser, the transfer may initially use a generic filename such as `Download.bin`. Wait for the transfer to finish and follow the browser's prompts to save the file.
 
-If an individual download is saved with a `.bin` extension rather than its original extension, you may need to rename it before using it.
-
-A ZIP package may need to be extracted on a compatible computer or device before its contents can be transferred to or used on the Psion. Do not assume that the Psion itself can extract every ZIP archive.
+If an individual download is saved with a `.bin` extension rather than its original extension, you may need to rename it before using it. A ZIP package can usually be extracted with RMRZip/Unzip.
 
 Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes or download links does not grant permission to redistribute the software they describe.
 
