@@ -43,6 +43,15 @@ The catalogue uses three JSON index files in the project directory:
 
 All three index files are included in the repository and should be kept up to date. At the current count, the index contains 4,880 programs.
 
+To refresh all three files from the Psion Community API, run this from the repository directory on a computer with Python 3 and internet access:
+
+```bash
+python3 update_software_indexes.py
+python3 -m unittest discover -s tests -v
+```
+
+The updater validates the API response before writing anything, preserves the full upstream records (including versions, variants and download references) in `software_index.json`, and regenerates the compact EPOC16/EPOC32 search indexes. Review the reported counts and file changes, then commit and push the updated JSON files. The script does not change Sidecar's selection or download-handling code.
+
 ## Downloading software
 
 Where a complete archive or package is available, Sidecar presents a **complete-package ZIP download**, which is the recommended option. This can be particularly important when the software consists of multiple files.
