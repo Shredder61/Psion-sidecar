@@ -1079,7 +1079,7 @@ Filter:
                         group_html.append('<li><strong>Source: </strong>' + title + (('<ul>' + entries_html + '</ul>') if entries_html else '') + '</li>')
 
                     rows.append(
-                        '<details><summary>Sources and archive paths (downloads may exceed 10MB, particularly ISOs); aggregated references</summary><ul>'
+                        '<br><br><details><summary>Sources and archive paths (downloads may exceed 10MB, particularly ISOs); aggregated references</summary><ul>'
                         + ''.join(group_html)
                         + '</ul><small>Archive links are shown when a URL is available; downloads may exceed 10MB (particularly ISOs). Individual program-file links are shown only when the catalogue reports a size of 10 MB or less.</small></details>'
                     )
