@@ -108,7 +108,7 @@ The downloader uses the Guardian's accessible crossword pages, e.g.:
 
 <https://www.theguardian.com/crosswords/accessible/quick/10271>
 
-It deliberately uses these pages rather than the Guardian's JSON/API interface.
+It retrieves the Guardian's webpage and extracts the structured JSON embedded in it, rather than depending on a separate API endpoint.
 
 The standalone downloader includes compatibility code for Python 2.7 and Python 3, although Python 3 is recommended. The browser-based web server requires Python 3.
 
