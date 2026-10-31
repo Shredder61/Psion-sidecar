@@ -41,7 +41,7 @@ The catalogue uses three JSON index files in the project directory:
 - `epoc32_index.json` — EPOC32 software index.
 - `software_index.json` — main software catalogue index.
 
-All three index files are included in the repository and should be kept up to date. At the current count, the index contains 4,880 programs.
+All three index files are included in the repository. At the current count, the index contains 4,880 programs.
 
 ## Downloading software
 
