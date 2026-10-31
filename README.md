@@ -204,9 +204,11 @@ Review a program's available downloads, download a package, and install it on th
 
 ![Installing chess software on the Psion](docs/images/software-chess-install.jpg)
 
+The program details page shows both the recommended complete ZIP package and the individual SIS installer.
+
 ![Downloading PhoneMan software](docs/images/software-phoneman-download.jpg)
 
-The program details page shows both the recommended complete ZIP package and the individual SIS installer.
+Using RMR Zip/Unzip to extract the .ZIP package.
 
 ![Contents of a downloaded ZIP package](docs/images/software-zip-contents.jpg)
 
