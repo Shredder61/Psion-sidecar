@@ -208,8 +208,6 @@ Review a program's available downloads, download a package, and install it on th
 
 The program details page shows both the recommended complete ZIP package and the individual SIS installer.
 
-![PhoneMan complete package and individual installer options](docs/images/software-detail-complete-package.jpg)
-
 ![Contents of a downloaded ZIP package](docs/images/software-zip-contents.jpg)
 
 ### Guardian crossword workflow
