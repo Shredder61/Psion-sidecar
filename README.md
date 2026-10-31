@@ -198,6 +198,8 @@ Search the catalogue and filter results by platform or program name.
 
 Review a program's available downloads, download a package, and install it on the Psion.
 
+![Chess software download options](docs/images/software-detail-complete-package.JPG)
+
 ![Chess software download options](docs/images/software-chess-download.jpg)
 
 ![Installing chess software on the Psion](docs/images/software-chess-install.jpg)
