@@ -27,7 +27,7 @@ A Raspberry Pi is required to host the browser-based Sidecar, but it is not nece
 
 ## Status and limitations
 
-This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible. The plan is to develop a separate script that will update the local indexes from the confirmed source.
+This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible. A Py script is provided that will update the local indexes from the Psion Community source.
 
 The Sidecar web interface is designed for simple, text-oriented browsing on older Psion devices. Features and external services may change over time. The RMR conversion workflow has been tested for successful file generation and download; compatibility with individual Psion crossword applications should be verified on the target device.
 
