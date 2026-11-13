@@ -166,7 +166,7 @@ python3 --version
 python3 -m py_compile sidecar_web.py guardian_pi.py crossword_converter.py
 ```
 
-Start the server in the foreground:
+Start the server in the foreground using the default port (8081):
 
 ```bash
 python3 sidecar_web.py
@@ -181,10 +181,12 @@ python3 sidecar_web.py --port 8082
 From a device on the same network, open:
 
 ```text
-http://<raspberry-pi-address>:8081/
+http://<host-address>:8081/
 ```
 
-Replace `<raspberry-pi-address>` with the hostname or IP address of your Raspberry Pi.
+Replace `<host-address>` with the hostname or IP address of the device running Sidecar (Raspberry Pi or Android device).
+
+If you started the server using port 8082, use `8082` instead of `8081` in the address.
 
 Stop the foreground server with `Ctrl+C`.
 
