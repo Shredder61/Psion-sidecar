@@ -1,0 +1,337 @@
+#!/data/data/com.termux/files/usr/bin/sh
+#
+# Safe GitHub updater for Psion Sidecar on Termux.
+# Requires explicit target, runit service and HTTP port.
+#
+set -eu
+
+REPOSITORY="https://github.com/Shredder61/Psion-sidecar.git"
+BRANCH="main"
+TARGET=""
+SERVICE=""
+PORT=""
+BACKUP_ROOT="${HOME}/.local/share/psion-sidecar/backups"
+PREFIX="${PREFIX:-}"
+
+FILES="
+sidecar_web.py
+guardian_pi.py
+crossword_converter.py
+software_index.json
+epoc16_index.json
+epoc32_index.json
+"
+
+usage() {
+    cat <<USAGE
+Usage:
+  $0 --target DIRECTORY --service NAME --port PORT [--backup-dir DIRECTORY]
+
+Example:
+  $0 --target "\$HOME/Psion-sidecar-test" \\
+     --service psion-sidecar-test --port 8082
+
+The selected runit service must already exist, be running, and reference
+the selected application directory and port. The updater never creates,
+enables, or changes service definitions.
+USAGE
+}
+
+error() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --target|--service|--port|--backup-dir)
+            [ "$#" -ge 2 ] || error "$1 requires a value"
+            option="$1"
+            value="$2"
+            case "$option" in
+                --target) TARGET="$value" ;;
+                --service) SERVICE="$value" ;;
+                --port) PORT="$value" ;;
+                --backup-dir) BACKUP_ROOT="$value" ;;
+            esac
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            error "Unknown option: $1"
+            ;;
+    esac
+done
+
+[ -n "$TARGET" ] || error "--target is required"
+[ -n "$SERVICE" ] || error "--service is required"
+[ -n "$PORT" ] || error "--port is required"
+
+case "$TARGET" in
+    /*) ;;
+    *) error "Target must be an absolute path" ;;
+esac
+case "$BACKUP_ROOT" in
+    /*) ;;
+    *) error "Backup directory must be an absolute path" ;;
+esac
+case "$SERVICE" in
+    *[!A-Za-z0-9_.-]*|'') error "Invalid service name" ;;
+esac
+case "$PORT" in
+    *[!0-9]*|'') error "Port must be numeric" ;;
+esac
+[ "$PORT" -ge 1 ] 2>/dev/null && [ "$PORT" -le 65535 ] ||
+    error "Port must be between 1 and 65535"
+
+[ -n "$PREFIX" ] || error "PREFIX is not set. Run this inside Termux."
+PYTHON="$PREFIX/bin/python"
+[ -x "$PYTHON" ] || error "Termux Python not found: $PYTHON"
+
+for command in git curl tar sv sleep mktemp cp rm mkdir date grep awk cmp; do
+    command -v "$command" >/dev/null 2>&1 ||
+        error "Required command not found: $command"
+done
+
+[ -d "$TARGET" ] || error "Application directory not found: $TARGET"
+[ -d "$PREFIX/var/service/$SERVICE" ] ||
+    error "Runit service does not exist: $SERVICE"
+
+SERVICE_DIR="$PREFIX/var/service/$SERVICE"
+RUN_FILE="$SERVICE_DIR/run"
+
+[ -f "$RUN_FILE" ] || error "Service run file is missing: $RUN_FILE"
+if ! grep -F "$TARGET/sidecar_web.py" "$RUN_FILE" >/dev/null; then
+    case "$TARGET" in
+        "$HOME"/*)
+            HOME_TARGET="\$HOME/${TARGET#"$HOME"/}/sidecar_web.py"
+            grep -F "$HOME_TARGET" "$RUN_FILE" >/dev/null ||
+                error "Service does not reference the selected application directory."
+            ;;
+        *)
+            error "Service does not reference the selected application directory."
+            ;;
+    esac
+fi
+grep -F -- "--port $PORT" "$RUN_FILE" >/dev/null ||
+    error "Service run file does not specify the selected port ($PORT)."
+
+if ! sv status "$SERVICE" >/dev/null 2>&1; then
+    error "Selected service is not running. No update attempted."
+fi
+
+WORK="$(mktemp -d "${TMPDIR:-$HOME}/sidecar-update.XXXXXX")"
+STAGE="$WORK/stage"
+EXTRACT="$WORK/extract"
+mkdir -p "$STAGE" "$EXTRACT"
+
+BACKUP=""
+UPDATE_STARTED=0
+SUCCESS=0
+
+cleanup() {
+    rm -rf "$WORK"
+}
+rollback() {
+    status=$?
+    if [ "$UPDATE_STARTED" -eq 1 ] && [ "$SUCCESS" -ne 1 ]; then
+        echo
+        echo "UPDATE FAILED. Attempting to restore the previous application."
+
+        sv down "$SERVICE" >/dev/null 2>&1 || true
+
+        if [ -n "$BACKUP" ] && [ -d "$BACKUP" ]; then
+            for file in $FILES; do
+                if grep -qx "$file" "$BACKUP/present-files"; then
+                    if ! cp -p "$BACKUP/$file" "$TARGET/$file"; then
+                        echo "CRITICAL: Could not restore $file."
+                        echo "Backup retained at: $BACKUP"
+                        echo "Service left stopped."
+                        exit 1
+                    fi
+                else
+                    rm -f "$TARGET/$file"
+                fi
+            done
+        else
+            echo "CRITICAL: No usable backup is available."
+            echo "Service left stopped."
+            exit 1
+        fi
+
+        if sv up "$SERVICE"; then
+            echo "Previous application files restored; service start requested."
+        else
+            echo "CRITICAL: Previous files restored, but service did not start."
+            echo "Inspect the service before restarting it."
+        fi
+        echo "Backup retained at: $BACKUP"
+    fi
+    cleanup
+    exit "$status"
+}
+trap rollback EXIT
+trap 'exit 1' HUP INT TERM
+
+echo "Checking GitHub main..."
+COMMIT="$(git ls-remote "$REPOSITORY" "refs/heads/$BRANCH" | awk 'NR == 1 {print $1}')"
+[ -n "$COMMIT" ] || error "Could not obtain the GitHub main commit."
+case "$COMMIT" in
+    *[!0-9a-f]*) error "GitHub returned an invalid commit identifier." ;;
+esac
+[ "${#COMMIT}" -eq 40 ] || error "Unexpected commit identifier length."
+
+echo "Preparing GitHub commit: $COMMIT"
+ARCHIVE_URL="https://codeload.github.com/Shredder61/Psion-sidecar/tar.gz/$COMMIT"
+curl -fL --retry 2 --connect-timeout 15 --max-time 180 \
+    -o "$WORK/source.tar.gz" "$ARCHIVE_URL"
+
+tar -xzf "$WORK/source.tar.gz" -C "$EXTRACT"
+
+SOURCE_DIR=""
+for candidate in "$EXTRACT"/*; do
+    if [ -f "$candidate/sidecar_web.py" ]; then
+        SOURCE_DIR="$candidate"
+        break
+    fi
+done
+[ -n "$SOURCE_DIR" ] || error "Could not locate the application in the GitHub archive."
+
+echo "Checking required application files..."
+for file in $FILES; do
+    [ -f "$SOURCE_DIR/$file" ] ||
+        error "Required file missing from GitHub source: $file"
+    cp "$SOURCE_DIR/$file" "$STAGE/$file"
+done
+
+echo "Checking Python syntax..."
+for file in sidecar_web.py guardian_pi.py crossword_converter.py; do
+    "$PYTHON" -m py_compile "$STAGE/$file" ||
+        error "Python syntax check failed: $file"
+done
+rm -rf "$STAGE/__pycache__"
+
+echo "Creating persistent backup..."
+
+mkdir -p "$BACKUP_ROOT"
+
+STAMP="$(date +%Y%m%d-%H%M%S)"
+
+BACKUP="$(mktemp -d "$BACKUP_ROOT/backup-$STAMP.XXXXXX")"
+
+: > "$BACKUP/present-files"
+
+for file in $FILES; do
+    if [ -f "$TARGET/$file" ]; then
+        cp -p "$TARGET/$file" "$BACKUP/$file"
+        printf '%s\n' "$file" >> "$BACKUP/present-files"
+    fi
+done
+
+printf '%s\n' "$COMMIT" > "$BACKUP/source-commit"
+printf '%s\n' "$TARGET" > "$BACKUP/target"
+printf '%s\n' "$SERVICE" > "$BACKUP/service"
+printf '%s\n' "$PORT" > "$BACKUP/port"
+
+echo "Verifying persistent backup..."
+
+for metadata in source-commit target service port present-files; do
+    [ -s "$BACKUP/$metadata" ] ||
+        error "Backup metadata missing or empty: $metadata"
+done
+
+grep -Fqx "$COMMIT" "$BACKUP/source-commit" ||
+    error "Backup commit metadata verification failed."
+
+grep -Fqx "$TARGET" "$BACKUP/target" ||
+    error "Backup target metadata verification failed."
+
+grep -Fqx "$SERVICE" "$BACKUP/service" ||
+    error "Backup service metadata verification failed."
+
+grep -Fqx "$PORT" "$BACKUP/port" ||
+    error "Backup port metadata verification failed."
+
+for file in $FILES; do
+    if [ -f "$TARGET/$file" ]; then
+        grep -qx "$file" "$BACKUP/present-files" ||
+            error "Backup inventory is missing: $file"
+
+        [ -f "$BACKUP/$file" ] ||
+            error "Backup copy is missing: $file"
+
+        cmp -s "$TARGET/$file" "$BACKUP/$file" ||
+            error "Backup verification failed: $file"
+    else
+        if grep -qx "$file" "$BACKUP/present-files"; then
+            error "Backup inventory incorrectly lists absent file: $file"
+        fi
+    fi
+done
+
+echo "Backup verification passed."
+echo "Backup retained at: $BACKUP"
+
+echo "Stopping selected service: $SERVICE"
+UPDATE_STARTED=1
+sv down "$SERVICE" || error "Could not stop service: $SERVICE"
+
+echo "Installing validated application files..."
+for file in $FILES; do
+    cp "$STAGE/$file" "$TARGET/$file" ||
+        error "Could not install $file"
+done
+
+echo "Starting selected service: $SERVICE"
+sv up "$SERVICE" || error "Could not start service: $SERVICE"
+
+echo "Checking HTTP health on port $PORT..."
+HEALTH_OK=0
+attempt=1
+MAX_ATTEMPTS=30
+LAST_CURL_STATUS=unknown
+LAST_HTTP_CODE=unknown
+
+while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
+    if LAST_HTTP_CODE="$(curl -sS --max-time 3 -o /dev/null \
+        -w "%{http_code}" "http://127.0.0.1:$PORT/" 2>/dev/null)"; then
+        LAST_CURL_STATUS=0
+    else
+        LAST_CURL_STATUS=$?
+    fi
+
+    if [ "$LAST_CURL_STATUS" -eq 0 ] &&
+       [ "$LAST_HTTP_CODE" -ge 200 ] 2>/dev/null &&
+       [ "$LAST_HTTP_CODE" -lt 400 ] 2>/dev/null; then
+        HEALTH_OK=1
+        echo "HTTP health check passed on attempt $attempt (HTTP $LAST_HTTP_CODE)."
+        break
+    fi
+
+    if ! sv status "$SERVICE" >/dev/null 2>&1; then
+        echo "Service is no longer running: $SERVICE" >&2
+        break
+    fi
+
+    if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+        sleep 2
+    fi
+    attempt=$((attempt + 1))
+done
+
+if [ "$HEALTH_OK" -ne 1 ]; then
+    error "HTTP health check failed on port $PORT after $attempt attempt(s). Last curl exit status: $LAST_CURL_STATUS; last HTTP code: ${LAST_HTTP_CODE:-none}."
+fi
+
+SUCCESS=1
+echo
+echo "SUCCESS: Termux Sidecar updated and responding."
+echo "GitHub commit: $COMMIT"
+echo "Service: $SERVICE"
+echo "Port: $PORT"
+echo "Backup retained at: $BACKUP"
+echo "Crossword data and service definitions were not changed."
