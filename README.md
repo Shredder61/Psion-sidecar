@@ -8,7 +8,7 @@ The crossword downloader, `guardian_pi.py`, can also be run independently on any
 
 Thanks to Kian (https://www.kianryan.co.uk), Daniel (https://github.com/danieledge), Jason (https://github.com/jbmorley), and Tom (https://github.com/tomsci) whose work on connectivity and software aggregation inspired me to get this project moving. In my situation, I used Kian's sidecar settings for the Modem/Comms and now use Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers. 
 
-However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it locally), I choose to add a separate Raspberry Pi on my network (which also displays shared calendars and 2Do lists on an e-Ink screen) to host a Psion "Home page". This gives the Psion access to the Psion Community software hyperlinks, news/search hyperlinks, and The Guardian crossword puzzles. Importantly, and a main driver for doing this work, is that the Psion searches the Pi's local software catalogue using compressed local indexes and hence does not need to commit large data downloads from the repositories, other for the program files themselves, which are usually quite small.
+However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it locally), I choose to add a separate Raspberry Pi on my network (which also displays shared calendars and 2Do lists on an e-Ink screen) to host a Psion "Home page". This gives the Psion access to the Psion Community software hyperlinks, news/search hyperlinks, and The Guardian crossword puzzles. Importantly, and a main driver for doing this work, is that the Psion searches the Pi's local software catalogue using compressed local indexes and hence does not need to commit large data downloads from the repositories, other than for the program files themselves, which are usually quite small.
 
 ## What's included
 
@@ -27,7 +27,7 @@ A Raspberry Pi or an Android device running Termux can host the browser-based Si
 
 ## Status and limitations
 
-This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible. The plan is to develop a separate script that will update the local indexes from the confirmed source.
+This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible. A Py script is provided that will update the local indexes from the Psion Community source.
 
 The Sidecar web interface is designed for simple, text-oriented browsing on older Psion devices. Features and external services may change over time. The RMR conversion workflow has been tested for successful file generation and download; compatibility with individual Psion crossword applications should be verified on the target device.
 
