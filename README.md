@@ -158,7 +158,7 @@ The standalone downloader includes compatibility code for Python 2.7 and Python 
 
 The Sidecar web interface uses `guardian_pi.py` to process crossword download requests and presents the results through a browser.
 
-After a successful request, the page provides links to save the original crossword or download an RMR-format version generated on the Raspberry Pi.
+After a successful request, the page provides links to save the original crossword or download an RMR-format version generated on the Sidecar host.
 
 The archive lists previously downloaded Quick and Cryptic crosswords stored in the project's `crosswords/` directory on the hosting device. Each archived crossword provides separate links to the original file and its RMR-converted version.
 
