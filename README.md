@@ -1,6 +1,6 @@
 # Psion Sidecar
 
-Psion Sidecar is a lightweight Python web application that provides a Psion-friendly homepage and access to online services from a Psion Series 5mx, Series 7 or other compatible EPOC device.
+Psion Sidecar is a lightweight Python web application that provides a Psion-friendly homepage and access to online services from a Psion Series 5, 5mx, Series 7 or other compatible EPOC device.
 
 The same Sidecar application can be hosted on a **Raspberry Pi** or an **Android device running Termux**. It brings together:
 
