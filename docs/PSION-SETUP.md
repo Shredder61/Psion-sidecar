@@ -6,15 +6,16 @@ getting Guardian crosswords into a compatible crossword application.
 
 ## 1. Open the Sidecar homepage
 
-1. Start the Sidecar server on the Raspberry Pi.
+1. Start Sidecar on the device hosting it (Raspberry Pi or Android).
 2. Connect the Psion to the same network, or establish your usual supported
-   connection to the Pi.
+   connection to the device hosting Sidecar.
 3. Open Opera or another compatible browser on the Psion.
-4. Enter `http://<raspberry-pi-address>:8081/`, replacing the placeholder with
-   the hostname or IP address of your Raspberry Pi.
+4. Enter `http://<host-address>:8081/`, replacing the placeholder with
+   the hostname or IP address of the device hosting Sidecar.
 
 The Sidecar server must be running, and the Psion must have a working connection
-to it.
+to it. The URL must use the port configured for the server; this is `8081` by
+default, but it may be different if the server was started with `--port`.
 
 ## 2. Browse files on the Sidecar
 
@@ -76,13 +77,14 @@ software you download.
 1. On the Sidecar homepage, choose the Quick or Cryptic crossword option.
 2. Enter the crossword number and submit the request.
 3. When the request completes, choose the version you need:
-   - **RMR version** (preferred) — converted by Sidecar on the Raspberry Pi and intended to
-     be opened directly in a compatible RMR / FatCatz crossword application.
+   - **RMR version** (preferred) — converted by Sidecar on the hosting device and
+     intended to be opened directly in a compatible RMR / FatCatz crossword
+     application.
    - **Original** — the original text file, intended for conversion before use
      in a compatible RMR / FatCatz crossword application.
 4. Select the download link and follow the browser's prompts to save the file
    on the Psion. You can also use the local archive to retrieve a crossword
-   already stored on the Raspberry Pi.
+   already stored on the device hosting Sidecar.
 
 Example original filenames include `Quick_17028.txt` and
 `Cryptic_30103.txt`. The converted RMR file is labelled separately in the
@@ -126,8 +128,8 @@ RMR / FatCatz Crossword.
 4. Open the resulting converted crossword in RMR / FatCatz Crossword.
 
 The screenshots below show the Psion-side import and conversion workflow.
-This OPL process is separate from the conversion performed by Sidecar on the
-Raspberry Pi.
+This OPL process is separate from the conversion performed by Sidecar on
+the device hosting Sidecar.
 
 ![Selecting a crossword to import](images/Import%20crossword.png)
 
@@ -138,8 +140,8 @@ Raspberry Pi.
 ## Notes
 
 - The Sidecar server must be running for its browser interface to be available.
-- The Raspberry Pi and Psion need a working network or other supported
-  connection between them.
+- The device hosting Sidecar and the Psion need a working network or other
+  supported connection between them.
 - Browser prompts and file-handling behaviour can vary by Psion model and
   browser version.
 - The Guardian website and external software archives can change

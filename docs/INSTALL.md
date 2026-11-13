@@ -37,13 +37,21 @@ python3 -m py_compile sidecar_web.py guardian_pi.py crossword_converter.py
 python3 sidecar_web.py
 ```
 
+To test on a different port, for example 8082, use:
+
+```bash
+python3 sidecar_web.py --port 8082
+```
+
 From another device on the same trusted local network, open:
 
 `http://<raspberry-pi-address>:8081/`
 
+If you started the server with `--port 8082`, use `http://<raspberry-pi-address>:8082/` instead.
+
 Replace the placeholder with the Raspberry Pi's hostname or IP address. Stop the foreground server with `Ctrl+C` before enabling the service.
 
-If port 8081 is already in use, change `PORT` near the top of `sidecar_web.py` and use the same port in the URL.
+If port 8081 is already in use, start the server with `--port` followed by an available port number, and use that same port in the browser URL and service configuration. For example: `python3 sidecar_web.py --port 8082`.
 
 ## 4. Configure automatic startup
 
@@ -57,6 +65,32 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now psion-sidecar.service
 sudo systemctl status psion-sidecar.service --no-pager
 ```
+
+### Using a non-default port with automatic startup
+
+The systemd service uses port `8081` by default. If the service has already been enabled, you can change its port by editing the service file as shown below. For a new installation, make this change before starting the service.
+
+Edit the installed service file:
+
+```bash
+sudo nano /etc/systemd/system/psion-sidecar.service
+```
+
+For port `8082`, change the `ExecStart` line to:
+
+```ini
+ExecStart=/usr/bin/python3 /opt/psion-sidecar/sidecar_web.py --port 8082
+```
+
+Then reload systemd and restart the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart psion-sidecar.service
+sudo systemctl status psion-sidecar.service --no-pager
+```
+
+Use the configured port when accessing Sidecar from the Psion or another device.
 
 **Verify that the service user can write to the crossword directory:**
 
@@ -107,4 +141,4 @@ The updater refuses to proceed if the service is stopped or the Git checkout has
 
 ## Security notes
 
-The server binds to all network interfaces on port 8081 by default and has no login or access control. It is intended for a trusted local network. Do not forward port 8081 from your router to the public internet. Consider firewall rules if the Raspberry Pi is reachable by untrusted devices.
+The server binds to all network interfaces on port 8081 by default and has no login or access control. The port can be changed using the `--port` command-line option. It is intended for a trusted local network. Do not forward the Sidecar port from your router to the public internet. Consider firewall rules if the Raspberry Pi is reachable by untrusted devices.
