@@ -1,33 +1,66 @@
 # Psion Sidecar
 
-Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi or an Android device running Termux. It brings together access to Psion Community software browsing, Psion-friendly search pages and news feeds, and Guardian crossword downloads (native or RMR / FatCatz format), all to download and access from the Psion.
+Psion Sidecar is a lightweight Python web application that provides a Psion-friendly homepage and access to online services from a Psion Series 5mx, Series 7 or other compatible EPOC device.
 
-The host device provides the web server and connects to the external services used by the project. The Sidecar can be accessed using a compatible browser such as Opera or PsiWeb, or from another computer. Note that the first Psion software search may take a little longer while the local cache is created.
+The same Sidecar application can be hosted on a **Raspberry Pi** or an **Android device running Termux**. It brings together:
 
-The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python, allowing you to download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`. When Sidecar is running, crossword downloading and conversion are integrated into the web interface.
+- Psion Community software browsing and downloads.
+- Local EPOC16 and EPOC32 software catalogue searches.
+- Psion-friendly search pages, news feeds and useful web resources.
+- Guardian Quick and Cryptic crossword downloads.
+- Original crossword files and conversion to RMR / FatCatz format.
+- A local archive of previously downloaded crosswords.
 
-Thanks to Kian (https://www.kianryan.co.uk), Daniel (https://github.com/danieledge), Jason (https://github.com/jbmorley), and Tom (https://github.com/tomsci) whose work on connectivity and software aggregation inspired me to get this project moving. In my situation, I used Kian's sidecar settings for the Modem/Comms and now use Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers. 
+The host device runs the web server and connects to the external services used by the project. The Psion accesses Sidecar using a compatible browser such as Opera or PsiWeb. Sidecar can also be opened from another computer or browser. The first software search may take a little longer while the local cache is created.
 
-However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it locally), I choose to add a separate Raspberry Pi on my network (which also displays shared calendars and 2Do lists on an e-Ink screen) to host a Psion "Home page". This gives the Psion access to the Psion Community software hyperlinks, news/search hyperlinks, and The Guardian crossword puzzles. Importantly, and a main driver for doing this work, is that the Psion searches the Pi's local software catalogue using compressed local indexes and hence does not need to commit large data downloads from the repositories, other than for the program files themselves, which are usually quite small.
+The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python, without running the web server. Downloaded files can be converted using the Python converter, `crossword_converter.py`, or transferred to the Psion and converted there using the separate OPL program, `crossword_converter_v01.txt`. When Sidecar is running, crossword downloading and conversion are integrated into the web interface.
+
+Thanks to Kian (https://www.kianryan.co.uk), Daniel (https://github.com/danieledge), Jason (https://github.com/jbmorley), and Tom (https://github.com/tomsci), whose work on connectivity and software aggregation inspired me to get this project moving. I initially used Kian's Sidecar settings for Modem/Comms and subsequently adopted Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers.
+
+Rather than modify Daniel's own M5Atom firmware locally, I chose to add a separate Sidecar host to my home network. My original Raspberry Pi also displays shared calendars and 2Do lists on an e-Ink screen, so it made sense to use it to host a Psion "home page" as well. This gives the Psion access to Psion Community software, news and search resources, and Guardian crosswords.
+
+An important motivation has been to make the Psion software archive practical to search from older hardware. Sidecar searches compact local catalogue indexes on the host and returns Psion-friendly results. The Psion does not need to download or search the large repository catalogues itself; it downloads only the program files it selects.
+
+## Hosting platforms and architecture
+
+Sidecar uses a common application codebase on both hosting platforms. The web interface, crossword downloader, converter and software catalogue are shared. Installation, service management and updating are platform-specific.
+
+| Deployment | How Sidecar runs | Installation and update guidance |
+|---|---|---|
+| Raspberry Pi (standalone) | A systemd service, typically installed under `/opt/psion-sidecar`. | [Raspberry Pi installation](docs/INSTALL.md). The repository includes `scripts/update-psion-sidecar` for the documented standard installation. |
+| Raspberry Pi alongside InkyPi | Sidecar runs as its own systemd service alongside the separate InkyPi application. | This is a deployment arrangement, not a separate Sidecar application. Keep the InkyPi service and configuration independent; back up and update the Sidecar checkout and restart only its service. |
+| Android with Termux | A runit service managed by `termux-services`. | [Android / Termux installation](docs/TERMUX-INSTALL.md), including the Termux installer and updater scripts. |
+
+The InkyPi arrangement allows one Raspberry Pi to host Sidecar while continuing to run InkyPi for an e-Ink display. The two applications have separate services: updating or restarting Sidecar does not require changing the InkyPi application or its service.
+
+## Updating
+
+Use the update procedure for the hosting platform:
+
+- **Standard Raspberry Pi installation:** follow [the Raspberry Pi updater instructions](docs/INSTALL.md#5-optional-install-the-updater). The supplied updater stages the latest GitHub `main`, backs up the installed application files, installs them and checks the web server.
+- **Android / Termux:** use `scripts/update-termux-sidecar` as described in [the Termux update instructions](docs/TERMUX-INSTALL.md#7-update-an-installed-instance). The updater targets one selected Termux service and leaves other instances and their service definitions alone.
+- **Custom Raspberry Pi arrangements, including InkyPi deployments:** first back up the Sidecar application and its crossword archive. Check that the Git working tree is clean, update the Sidecar checkout, compile-check the Python files, and restart only the Sidecar systemd service. Do not replace or restart the separate InkyPi application or service.
+
+After any update, check the Sidecar service status and open its homepage. Then test the software catalogue and crossword download workflow. A successful HTTP health check alone does not prove that external searches or downloads work.
 
 ## What's included
 
 - A Psion Community software catalogue interface, including filtered program searches and download links.
 - Psion-friendly web resources, including access to FrogFind.
-- An example systemd service for starting the server automatically when the Raspberry Pi boots.
+- Example service definitions for Raspberry Pi (systemd) and Android / Termux (runit).
 - Guardian Quick and Cryptic crossword download requests.
 - Direct downloads of original Guardian crossword text files.
-- On-demand conversion of downloaded crosswords to RMR / FatCatz format on the Raspberry Pi.
+- On-demand conversion of downloaded crosswords to RMR / FatCatz format on the hosting device.
 - A local crossword archive with links to both original and RMR-converted files.
 - A separate Psion-side OPL conversion workflow for users who prefer to convert crossword files on the Psion.
 
-The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar web server uses Python's standard library and does not require third-party Python packages.
+The project has been developed and tested on Raspberry Pi OS and Android using Termux. The Sidecar web server uses Python's standard library and does not require third-party Python packages.
 
 A Raspberry Pi or an Android device running Termux can host the browser-based Sidecar. A suitable computer with Python can also run the standalone crossword downloader.
 
 ## Status and limitations
 
-This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible. A Py script is provided that will update the local indexes from the Psion Community source.
+This is a community project provided as-is. The Guardian website, FrogFind and external software archives can change independently of this code. Downloading, searching and catalogue browsing therefore depend on those external services remaining compatible and accessible. A Python script is provided to update the local indexes from the Psion Community source.
 
 The Sidecar web interface is designed for simple, text-oriented browsing on older Psion devices. Features and external services may change over time. The RMR conversion workflow has been tested for successful file generation and download; compatibility with individual Psion crossword applications should be verified on the target device.
 
@@ -75,7 +108,7 @@ Please respect the provenance, copyright and redistribution terms of the indexed
 There are two main ways to download Guardian Quick and Cryptic crosswords for use on the Psion.
 
 - **Standalone downloader:** Run `guardian_pi.py` directly on a suitable PC or Raspberry Pi to download and save a crossword text file.
-- **Sidecar downloader:** Request a crossword through the Raspberry Pi's web interface. Sidecar offers the original crossword and an RMR-format version generated by `crossword_converter.py`.
+- **Sidecar downloader:** Request a crossword through the Sidecar web interface on the Raspberry Pi or Android host. Sidecar offers the original crossword and an RMR-format version generated by `crossword_converter.py`.
 
 The Python converter can also be used separately. Alternatively, the original crossword can be transferred to the Psion and converted using the OPL conversion program described below.
 
@@ -127,15 +160,15 @@ The Sidecar web interface uses `guardian_pi.py` to process crossword download re
 
 After a successful request, the page provides links to save the original crossword or download an RMR-format version generated on the Raspberry Pi.
 
-The archive lists previously downloaded Quick and Cryptic crosswords stored in the project's `crosswords/` directory. Each archived crossword provides separate links to the original file and its RMR-converted version.
+The archive lists previously downloaded Quick and Cryptic crosswords stored in the project's `crosswords/` directory on the hosting device. Each archived crossword provides separate links to the original file and its RMR-converted version.
 
-Converted files are stored on the Raspberry Pi and can be downloaded directly to a compatible Psion browser. The conversion output is cached and regenerated if the original crossword is newer than the converted file.
+Converted files are stored on the hosting device and can be downloaded directly to a compatible Psion browser. The conversion output is cached and regenerated if the original crossword is newer than the converted file.
 
 ## Importing Guardian crosswords into RMR / FatCatz Crossword
 
 Sidecar provides two ways to prepare a Guardian crossword:
 
-- **Direct RMR download:** Select **Download RMR version** in Sidecar. The Raspberry Pi converts the original crossword into RMR format and serves the converted file for download, allowing you to save it directly to the Psion.
+- **Direct RMR download:** Select **Download RMR version** in Sidecar. The Sidecar host converts the original crossword into RMR format and serves the converted file for download, allowing you to save it directly to the Psion.
 - **Psion-side conversion:** Download the original crossword and use the separate `crossword_converter_v01.txt` OPL program to convert it on the Psion.
 
 ## Converting a crossword on the Psion
@@ -166,7 +199,7 @@ python3 --version
 python3 -m py_compile sidecar_web.py guardian_pi.py crossword_converter.py
 ```
 
-Start the server in the foreground using the default port (8081):
+For a quick foreground test on either platform, start the server using the default port (8081):
 
 ```bash
 python3 sidecar_web.py
@@ -197,7 +230,7 @@ The server listens on `0.0.0.0` on port `8081` by default. Use `--port PORT` to 
 - Guardian Quick and Cryptic crossword download requests.
 - Access to locally stored crossword files.
 - Psion Community software catalogue and download links, when the required index data is available.
-- FrogFind search access through the Pi.
+- FrogFind search access through the Sidecar host.
 
 ## Screenshots
 
@@ -264,7 +297,11 @@ For step-by-step instructions on accessing Sidecar from a Psion, searching the s
 - `guardian_pi.py` — Guardian crossword downloader.
 - `crossword_converter.py` — Python converter for producing RMR-format crossword files.
 - `crossword_converter_v01.txt` — OPL conversion program for use on the Psion.
-- `systemd/psion-sidecar.service` — example systemd service.
+- `systemd/psion-sidecar.service` — example Raspberry Pi systemd service.
+- `scripts/update-psion-sidecar` — updater for the documented standard Raspberry Pi installation.
+- `scripts/install-termux.sh` — Android / Termux installer.
+- `scripts/update-termux-sidecar` — Android / Termux updater.
+- `termux/services/psion-sidecar/run` — example Termux runit service.
 - `crosswords/` — local crossword storage, including original and converted files.
 - `docs/` — installation and usage notes.
 - `epoc16_index.json` — EPOC16 software index.
