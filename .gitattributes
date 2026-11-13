@@ -1,0 +1,19 @@
+# Consistent LF line endings across Windows, macOS and Linux
+* text=auto eol=lf
+
+# Explicit text file types
+*.py text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Binary files
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.zip binary
