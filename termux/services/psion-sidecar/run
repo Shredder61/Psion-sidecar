@@ -1,0 +1,7 @@
+#!/data/data/com.termux/files/usr/bin/sh
+
+APP_DIR="$HOME/Psion-sidecar"
+
+cd "$APP_DIR" || exit 1
+
+exec "$PREFIX/bin/python" "$HOME/Psion-sidecar/sidecar_web.py" --port 8081

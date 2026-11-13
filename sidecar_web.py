@@ -8,6 +8,7 @@ import re
 from urllib.request import Request, urlopen
 import json
 from functools import lru_cache
+import argparse
 
 
 HOST = "0.0.0.0"
@@ -1914,13 +1915,24 @@ Shredder61 - 2026
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Guardian Sidecar web server")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=PORT,
+        help=f"HTTP port (default: {PORT})",
+    )
+    args = parser.parse_args()
+
+    if not 1 <= args.port <= 65535:
+        parser.error("port must be between 1 and 65535")
 
     print("Guardian Sidecar web server")
     print(f"Serving: {ROOT}")
-    print(f"Port: {PORT}")
+    print(f"Port: {args.port}")
 
     server = ThreadingHTTPServer(
-        (HOST, PORT),
+        (HOST, args.port),
         lambda *args, **kwargs:
             SidecarHandler(
                 *args,

@@ -1,10 +1,10 @@
 # Psion Sidecar
 
-Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi. It brings together access to the Psion Community software browsing, Psion-friendly search pages and news feeds, and Guardian crossword downloads (native or RMR / FatCatz format), all to download and access from the Psion. 
+Psion Sidecar is a small Python web server that provides a Psion-friendly homepage hosted on a Raspberry Pi or an Android device running Termux. It brings together access to Psion Community software browsing, Psion-friendly search pages and news feeds, and Guardian crossword downloads (native or RMR / FatCatz format), all to download and access from the Psion.
 
-The Sidecar can be accessed using a compatible browser such as Opera or PsiWeb or you can access it from any other computer. The Raspberry Pi provides the web server and connects to the external services used by the project. Note that, when searching for Psion software, the first program search may take a little longer while the local cache is created. 
+The host device provides the web server and connects to the external services used by the project. The Sidecar can be accessed using a compatible browser such as Opera or PsiWeb, or from another computer. Note that the first Psion software search may take a little longer while the local cache is created.
 
-The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python so you can download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`. However, with the Raspberry Pi implementation, all of this is integrated.
+The crossword downloader, `guardian_pi.py`, can also be run independently on any suitable computer with Python, allowing you to download crosswords without running the web server. You can then convert the downloaded files using the Python converter, `crossword_converter.py`, or transfer them to the Psion and use the separate OPL program, `crossword_converter_v01.txt`. When Sidecar is running, crossword downloading and conversion are integrated into the web interface.
 
 Thanks to Kian (https://www.kianryan.co.uk), Daniel (https://github.com/danieledge), Jason (https://github.com/jbmorley), and Tom (https://github.com/tomsci) whose work on connectivity and software aggregation inspired me to get this project moving. In my situation, I used Kian's sidecar settings for the Modem/Comms and now use Daniel's M5Atom PsiTerm suite implementation for network access because I like the minimalist hardware execution that the M5Atom offers. 
 
@@ -23,7 +23,7 @@ However, respecting Daniel's own firmware on the M5Atom (i.e., to not change it 
 
 The project was developed and tested on Raspberry Pi OS with Python 3.13. The Sidecar web server uses Python's standard library and does not require third-party Python packages.
 
-A Raspberry Pi is required to host the browser-based Sidecar, but it is not necessary if you only want to run the standalone crossword downloader.
+A Raspberry Pi or an Android device running Termux can host the browser-based Sidecar. A suitable computer with Python can also run the standalone crossword downloader.
 
 ## Status and limitations
 
@@ -172,6 +172,12 @@ Start the server in the foreground:
 python3 sidecar_web.py
 ```
 
+To use a different port, for example 8082:
+
+```bash
+python3 sidecar_web.py --port 8082
+```
+
 From a device on the same network, open:
 
 ```text
@@ -182,7 +188,7 @@ Replace `<raspberry-pi-address>` with the hostname or IP address of your Raspber
 
 Stop the foreground server with `Ctrl+C`.
 
-The server listens on `0.0.0.0` on port `8081` by default. Do not expose this port directly to the public internet without appropriate security controls.
+The server listens on `0.0.0.0` on port `8081` by default. Use `--port PORT` to select another port; the chosen port must also be used in the browser URL and any service configuration. Do not expose the server directly to the public internet without appropriate security controls.
 
 ## Features of the Sidecar homepage
 
@@ -245,7 +251,8 @@ Open the converted file in RMR / FatCatz Crossword and save it in the desired fo
 
 ## Installation as a service
 
-See [docs/INSTALL.md](docs/INSTALL.md) for instructions on installing the server as a systemd service.
+- [Raspberry Pi installation](docs/INSTALL.md) — installation and configuration as a systemd service.
+- [Android / Termux installation](docs/TERMUX-INSTALL.md) — installation and configuration as a runit service.
 
 For step-by-step instructions on accessing Sidecar from a Psion, searching the software catalogue, and downloading software or crosswords, see [Using Sidecar from a Psion](docs/PSION-SETUP.md).
 
