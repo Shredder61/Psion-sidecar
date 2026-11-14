@@ -187,7 +187,7 @@ write_fixture() {
     for file in \
         sidecar_web.py \
         guardian_pi.py \
-        crossword_converter.py \
+        guardian_to_puz.py \
         guardian_to_puz.py
     do
         printf 'VERSION = "%s"\n' "$version" \
@@ -212,7 +212,7 @@ RUN
 
 seed_old_install() {
     for file in \
-        sidecar_web.py guardian_pi.py crossword_converter.py guardian_to_puz.py \
+        sidecar_web.py guardian_pi.py guardian_to_puz.py guardian_to_puz.py \
         software_index.json epoc16_index.json epoc32_index.json
     do
         printf 'VERSION = "old"\n' > "$TARGET/$file"

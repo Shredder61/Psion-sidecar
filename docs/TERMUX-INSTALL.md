@@ -54,7 +54,7 @@ The installed application includes:
 
 - `sidecar_web.py`
 - `guardian_pi.py`
-- `crossword_converter.py`
+- ``
 - `software_index.json`
 - `epoc16_index.json`
 - `epoc32_index.json`

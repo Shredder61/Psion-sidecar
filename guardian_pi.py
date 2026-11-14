@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Guardian Crossword Downloader
-# Python 2.7 and Python 3 compatible.
+# Python 3.
 #
 # IDLE use:
 #   Run the file with F5 and answer the two questions.
@@ -10,9 +10,7 @@
 #   python guardian.py cryptic 30103
 #
 # The program downloads the Guardian accessible/text-only crossword page
-# and saves the puzzle in a simple text format.
-
-from __future__ import print_function
+# and saves a standard Across Lite .puz file.
 
 import os
 import re
@@ -29,21 +27,10 @@ CRYPTIC_MAX = 30109
 # Default output directory: a crosswords folder beside this script.
 DEFAULT_OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crosswords")
 
-try:
-    from urllib.request import Request, urlopen
-except ImportError:
-    from urllib2 import Request, urlopen
+from urllib.request import Request, urlopen
+from html.parser import HTMLParser
 
-try:
-    from html.parser import HTMLParser
-except ImportError:
-    from HTMLParser import HTMLParser
-
-
-try:
-    input_func = raw_input
-except NameError:
-    input_func = input
+input_func = input
 
 
 class GuardianParser(HTMLParser):
@@ -251,10 +238,7 @@ def psion_safe_text(text):
     except Exception:
         pass
 
-    try:
-        return text.encode("ascii", "ignore").decode("ascii")
-    except AttributeError:
-        return text.encode("ascii", "ignore")
+    return text.encode("ascii", "ignore").decode("ascii")
 
 
 def download(url):
@@ -348,72 +332,58 @@ def validate_number(kind, number):
     return None
 
 
-def download_one(kind, number, output_dir):
-    """Download and save one crossword. Return True on success."""
+def fetch_source(kind, number):
+    """Fetch and parse a Guardian crossword without writing an intermediate file."""
     error = validate_number(kind, number)
     if error:
-        print("ERROR: " + error)
-        return False
+        raise ValueError(error)
 
-    url = ("https://www.theguardian.com/crosswords/accessible/" "%s/%s" % (kind, number))
+    url = "https://www.theguardian.com/crosswords/accessible/%s/%s" % (kind, number)
     print("\nDownloading:")
     print(url)
     try:
-        html = download(url)
-    except Exception as e:
-        # Missing historical puzzles are normal gaps in the Guardian archive.
-        # Record a 404 as NOT AVAILABLE and continue with the next puzzle.
-        if getattr(e, "code", None) == 404:
-            print(
-                "NOT AVAILABLE: Crossword %d is not present in the Guardian online archive."
-                % number
-            )
-            return False
-        print("ERROR: Could not download crossword.")
-        print(str(e))
-        return False
+        page = download(url)
+    except Exception as exc:
+        if getattr(exc, "code", None) == 404:
+            raise RuntimeError(
+                "Crossword %d is not present in the Guardian online archive." % number
+            ) from exc
+        raise RuntimeError("Could not download crossword: %s" % exc) from exc
+
     parser = GuardianParser()
     try:
-        parser.feed(html)
+        parser.feed(page)
         parser.close()
-    except Exception as e:
-        print("ERROR: Could not parse Guardian page.")
-        print(str(e))
-        return False
-    try:
-        text = make_output(parser, kind, number)
-        text = psion_safe_text(text)
-    except Exception as e:
-        print("ERROR: " + str(e))
-        return False
-    if not os.path.isdir(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except OSError:
-            if not os.path.isdir(output_dir):
-                print("ERROR: Could not create output directory.")
-                return False
-    filename = "Quick_%s.txt" % number if kind == "quick" else "Cryptic_%s.txt" % number
+        source = psion_safe_text(make_output(parser, kind, number))
+    except Exception as exc:
+        raise RuntimeError("Could not parse Guardian crossword: %s" % exc) from exc
+
+    return source, parser
+
+
+def download_one(kind, number, output_dir):
+    """Download, convert and save one crossword as PUZ. Return True on success."""
+    filename = "%s_%s.puz" % (kind.capitalize(), number)
     path = os.path.join(output_dir, filename)
     if os.path.exists(path):
         print("Already exists - skipped:", path)
         return True
+
     try:
-        with open(path, "wb") as f:
-            try:
-                f.write(text.encode("utf-8"))
-            except AttributeError:
-                f.write(text)
-    except Exception as e:
-        print("ERROR: Could not save output.")
-        print(str(e))
+        source, _ = fetch_source(kind, number)
+        from guardian_to_puz import convert_source
+        puzzle = convert_source(
+            source, path,
+            title="Guardian %s %d" % (kind.capitalize(), number),
+        )
+    except Exception as exc:
+        print("ERROR:", str(exc))
         return False
-    print("Downloaded successfully.")
-    print("Grid lines:", len(parser.items["Blanks"]))
-    print("Across clues:", len(parser.items["Across"]))
-    print("Down clues:", len(parser.items["Down"]))
-    print("Across solutions:", len(parser.items["AcrossSolutions"]))
-    print("Down solutions:", len(parser.items["DownSolutions"]))
+
+    print("Downloaded and converted successfully.")
+    print("Grid:", puzzle["width"], "x", puzzle["height"])
+    print("Across clues:", len(puzzle["across_clues"]))
+    print("Down clues:", len(puzzle["down_clues"]))
     print("Saved:", os.path.abspath(path))
     return True
 
@@ -461,8 +431,23 @@ def get_latest_number(kind):
             "Could not find the latest %s crossword number." % kind
         )
 
-    return int(match.group(1).replace(",", ""))
+    number = int(match.group(1).replace(",", ""))
+    minimum = QUICK_MIN if kind == "quick" else CRYPTIC_MIN
+    if number < minimum:
+        raise RuntimeError(
+            "Guardian returned an implausible %s crossword number: %d."
+            % (kind, number)
+        )
 
+    return number
+
+
+def prompt_output_dir():
+    """Ask where PUZ files should be saved, defaulting to the local archive."""
+    output_dir = input_func(
+        "Output directory (full path; Enter for the crosswords folder beside this program): "
+    ).strip()
+    return output_dir or DEFAULT_OUTPUT_DIR
 
 
 def main():
@@ -501,13 +486,7 @@ def main():
                 print("Please enter a valid crossword number.")
                 continue
 
-            output_dir = input(
-                "Output directory (enter the full path, including a new directory if you want one; Enter for default which is to create/populate a crossword folder in the same folder as the program): "
-            ).strip()
-
-            if not output_dir:
-                output_dir = DEFAULT_OUTPUT_DIR
-
+            output_dir = prompt_output_dir()
             download_one(kind, number, output_dir)
 
         elif choice == "2":
@@ -550,15 +529,31 @@ def main():
                 )
                 continue
 
-            output_dir = input(
-                "Output directory (enter the full path, including a new directory if you want one; Enter for default which is to create/populate a crossword folder in the same folder as the program): "
-            ).strip()
+            output_dir = prompt_output_dir()
 
-            if not output_dir:
-                output_dir = DEFAULT_OUTPUT_DIR
+            downloaded = 0
+            skipped = 0
+            unavailable = 0
 
             for number in range(first, last + 1):
-                download_one(kind, number, output_dir)
+                filename = "%s_%s.puz" % (kind.capitalize(), number)
+                path = os.path.join(output_dir, filename)
+                existed = os.path.isfile(path)
+
+                if download_one(kind, number, output_dir):
+                    if existed:
+                        skipped += 1
+                    else:
+                        downloaded += 1
+                else:
+                    unavailable += 1
+
+            print("")
+            print("BATCH SUMMARY")
+            print("Downloaded:", downloaded)
+            print("Already existed (skipped):", skipped)
+            print("Unavailable or failed:", unavailable)
+            print("Total processed:", downloaded + skipped + unavailable)
 
         elif choice == "3":
             kind = input(
@@ -584,8 +579,7 @@ def main():
             else:
                 globals()["CRYPTIC_MAX"] = number
         
-            output_dir = DEFAULT_OUTPUT_DIR
-        
+            output_dir = prompt_output_dir()
             download_one(kind, number, output_dir)
         
         elif choice == "4":

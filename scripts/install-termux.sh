@@ -9,7 +9,7 @@ TARGET="$HOME/Psion-sidecar"
 FILES="
 sidecar_web.py
 guardian_pi.py
-crossword_converter.py
+guardian_to_puz.py
 software_index.json
 epoc16_index.json
 epoc32_index.json
@@ -96,7 +96,7 @@ done
 
 echo "Checking Python syntax..."
 
-for file in sidecar_web.py guardian_pi.py crossword_converter.py; do
+for file in sidecar_web.py guardian_pi.py guardian_to_puz.py; do
     "$PREFIX/bin/python" -m py_compile "$STAGE/$file"
 done
 

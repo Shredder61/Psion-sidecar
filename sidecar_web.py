@@ -361,8 +361,6 @@ class SidecarHandler(SimpleHTTPRequestHandler):
             self.send_guardian_crossword()
         elif path == "/request":
             self.handle_request(query)
-        elif path == "/rmr":
-            self.handle_rmr(query)
         elif path == "/puz":
             self.handle_puz(query)
         elif path == "/frogfind":
@@ -1481,56 +1479,6 @@ Language: {html.escape(languages)}
 
             self.wfile.write(data)
 
-    def handle_rmr(self, query):
-        """Convert a Guardian crossword to RMR format and serve it."""
-        import re
-
-        filename = query.get("file", [""])[0].strip()
-
-        # Be tolerant of a stale archive page that links an already-converted
-        # file as an RMR input. Redirect to the existing file instead of
-        # rejecting it as an invalid original crossword filename.
-        if re.fullmatch(r"(?:Quick|Cryptic)_\d+_converted\.txt", filename):
-            output_path = ROOT / filename
-            if output_path.is_file():
-                self.send_rmr_download(output_path)
-            else:
-                self.send_error(404, "Converted crossword not found")
-            return
-
-        if not re.fullmatch(r"(?:Quick|Cryptic)_\d+\.txt", filename):
-            self.send_error(400, "Invalid crossword filename")
-            return
-
-        source_path = ROOT / filename
-        if not source_path.is_file():
-            self.send_error(404, "Original crossword not found")
-            return
-
-        output_path = ROOT / (source_path.stem + "_converted.txt")
-
-        try:
-            if (
-                not output_path.exists()
-                or output_path.stat().st_mtime < source_path.stat().st_mtime
-            ):
-                import sys
-                sys.path.insert(0, str(ROOT.parent))
-                from crossword_converter import convert_text
-
-                source = source_path.read_text(
-                    encoding="utf-8", errors="replace"
-                )
-                converted = convert_text(source)
-                output_path.write_text(
-                    converted, encoding="utf-8", newline="\r\n"
-                )
-        except Exception as exc:
-            self.send_error(422, "RMR conversion failed: " + str(exc))
-            return
-
-        self.send_rmr_download(output_path)
-
     def handle_puz(self, query):
         """Serve a generated Across Lite puzzle as a download."""
         filename = query.get("file", [""])[0].strip()
@@ -1561,25 +1509,6 @@ Language: {html.escape(languages)}
         self.end_headers()
         self.wfile.write(data)
 
-    def send_rmr_download(self, output_path):
-        """Serve an RMR crossword as a downloadable attachment."""
-        try:
-            data = output_path.read_bytes()
-        except OSError:
-            self.send_error(404, "Converted crossword not found")
-            return
-
-        self.send_response(200)
-        self.send_header("Content-Type", "application/octet-stream")
-        self.send_header(
-            "Content-Disposition",
-            'attachment; filename="%s"' % output_path.name
-        )
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(data)
-
     def handle_request(self, query):
         import sys
 
@@ -1589,102 +1518,50 @@ Language: {html.escape(languages)}
         if kind not in ("quick", "cryptic"):
             self.send_error(400, "Invalid crossword type")
             return
-
         try:
             number = int(number_text)
         except ValueError:
             self.send_error(400, "Invalid crossword number")
             return
-
         if number < 1:
             self.send_error(400, "Invalid crossword number")
             return
 
         stem = "%s_%d" % (kind.capitalize(), number)
-        source_path = ROOT / (stem + ".txt")
-        rmr_path = ROOT / (stem + "_converted.txt")
         puz_path = ROOT / (stem + ".puz")
 
         try:
-            if rmr_path.is_file() and puz_path.is_file():
-                # Both output formats already exist; retain the Guardian source.
-                pass
-            else:
-                sys.path.insert(0, str(ROOT.parent))
-                import guardian_pi
-                from crossword_converter import convert_text
-                from guardian_to_puz import convert_file as convert_guardian_to_puz
+            sys.path.insert(0, str(ROOT.parent))
+            import guardian_pi
 
+            if not puz_path.is_file():
                 latest = guardian_pi.get_latest_number(kind)
-                minimum = (
-                    guardian_pi.QUICK_MIN
-                    if kind == "quick"
-                    else guardian_pi.CRYPTIC_MIN
-                )
+                minimum = guardian_pi.QUICK_MIN if kind == "quick" else guardian_pi.CRYPTIC_MIN
                 if number < minimum or number > latest:
                     raise ValueError(
-                        "Crossword number outside available range "
-                        "(%d-%d)." % (minimum, latest)
+                        "Crossword number outside available range (%d-%d)." %
+                        (minimum, latest)
                     )
-
                 if kind == "quick":
                     guardian_pi.QUICK_MAX = latest
                 else:
                     guardian_pi.CRYPTIC_MAX = latest
-
-                if not source_path.is_file():
-                    success = guardian_pi.download_one(
-                        kind, number, str(ROOT)
-                    )
-                    if not success or not source_path.is_file():
-                        raise RuntimeError("Guardian crossword download failed.")
-
-                source = source_path.read_text(
-                    encoding="utf-8", errors="replace"
-                )
-
-                # Build both formats from the same native Guardian source.
-                # The PUZ converter validates grid geometry and all crossings.
-                converted = convert_text(source)
-                convert_guardian_to_puz(
-                    source_path,
-                    puz_path,
-                    title="Guardian %s %d" % (kind.capitalize(), number),
-                )
-                rmr_path.write_text(
-                    converted, encoding="utf-8", newline="\r\n"
-                )
-
-                # Keep the native Guardian source as an archive and recovery
-                # copy. In particular, do not delete it: Windows/Dropbox or
-                # another process may hold a file lock, and cleanup must never
-                # turn a successful conversion into an HTTP error.
-
-            status_text = (
-                "Downloaded and converted to PUZ format for opening in "
-                "RMR or FatCatz Crosswords."
-            )
-
+                if not guardian_pi.download_one(kind, number, str(ROOT)):
+                    raise RuntimeError("Guardian crossword download or PUZ conversion failed.")
+            if not puz_path.is_file():
+                raise RuntimeError("PUZ file was not created.")
+            status_text = "Guardian crossword ready. Download the PUZ file to open in RMR or FatCatz Crosswords."
         except Exception as exc:
-            # Preserve the Guardian source whenever download or conversion
-            # fails so that the problem can be investigated or retried.
-            self.send_error(
-                422, "Crossword download or conversion failed: " + str(exc)
-            )
+            self.send_error(422, "Crossword download or conversion failed: " + str(exc))
             return
 
         message = (
-            "<html><head><title>Psion Sidecar</title></head>"
-            "<body>"
-            "<h1>Crossword ready</h1>"
-            "<p>%s</p>"
+            "<html><head><title>Psion Sidecar</title></head><body>"
+            "<h1>Crossword ready</h1><p>%s</p>"
             "<p><a href='/puz?file=%s'>DOWNLOAD ACROSS LITE PUZZLE (.PUZ)</a></p>"
             "<p><a href='/guardian-crossword'>Back to Guardian Crosswords</a></p>"
             "</body></html>"
-        ) % (
-            html.escape(status_text),
-            html.escape(puz_path.name),
-        )
+        ) % (html.escape(status_text), html.escape(puz_path.name))
 
         data = message.encode("utf-8")
         self.send_response(200)
@@ -1741,204 +1618,96 @@ Language: {html.escape(languages)}
 
     def send_guardian_crossword(self):
         import sys
-
         sys.path.insert(0, str(ROOT.parent))
 
         try:
             from guardian_pi import (
-                get_latest_number,
-                QUICK_MIN, QUICK_MAX,
+                get_latest_number, QUICK_MIN, QUICK_MAX,
                 CRYPTIC_MIN, CRYPTIC_MAX,
             )
-
-            latest_quick = get_latest_number("quick")
-            latest_cryptic = get_latest_number("cryptic")
-
         except Exception:
-            # Fall back to the archive ranges stored in guardian_pi.py
+            # Keep the archive usable even if the downloader module cannot load.
+            get_latest_number = None
             QUICK_MIN, QUICK_MAX = 9093, 17583
             CRYPTIC_MIN, CRYPTIC_MAX = 21620, 30109
-            latest_quick = None
-            latest_cryptic = None
+
+        # Resolve each series independently: a temporary failure for one
+        # Guardian page must not hide the latest number for the other series.
+        latest_quick = None
+        latest_cryptic = None
+        if get_latest_number is not None:
+            try:
+                latest_quick = get_latest_number("quick")
+            except Exception as exc:
+                print("Could not determine latest Quick crossword:", repr(exc))
+            try:
+                latest_cryptic = get_latest_number("cryptic")
+            except Exception as exc:
+                print("Could not determine latest Cryptic crossword:", repr(exc))
 
         quick_high = latest_quick or QUICK_MAX
         cryptic_high = latest_cryptic or CRYPTIC_MAX
-
-
-        # The archive contains converted RMR files only.
         quick_files = sorted(
-            ROOT.glob("Quick_*_converted.txt"),
-            key=lambda p: p.name
+            ROOT.glob("Quick_*.puz"),
+            key=lambda path: int(re.search(r"Quick_(\d+)\.puz$", path.name).group(1))
         )
-
         cryptic_files = sorted(
-            ROOT.glob("Cryptic_*_converted.txt"),
-            key=lambda p: p.name
+            ROOT.glob("Cryptic_*.puz"),
+            key=lambda path: int(re.search(r"Cryptic_(\d+)\.puz$", path.name).group(1))
         )
 
         def link_for(path):
             name = html.escape(path.name)
-            stem = path.name.removesuffix("_converted.txt")
-            puz_name = html.escape(stem + ".puz")
-            source_name = html.escape(stem + ".txt")
+            return f'<li>{name} — <a href="/puz?file={name}">DOWNLOAD PUZ</a></li>'
 
-            puz_link = (
-                f' <a href="/puz?file={puz_name}">PUZ</a>'
-                if (ROOT / (stem + ".puz")).is_file() else ""
-            )
-            source_link = (
-                f' <a href="/{source_name}">Guardian source</a>'
-                if (ROOT / (stem + ".txt")).is_file() else ""
-            )
+        rows = ["<h2>TODAY'S CROSSWORDS</h2>"]
+        for label, latest in (("Quick", latest_quick), ("Cryptic", latest_cryptic)):
+            if latest:
+                filename = f"{label}_{latest}.puz"
+                if (ROOT / filename).is_file():
+                    rows.append(
+                        f'<p><strong>{label} {latest}</strong> — '
+                        f'<a href="/puz?file={filename}">DOWNLOAD PUZ</a></p>'
+                    )
+                else:
+                    rows.append(f"<p><strong>{label} {latest}</strong> — not downloaded yet</p>")
 
-            return (
-                f'<li>{name} — '
-                f'<a href="/rmr?file={name}">RMR</a>'
-                f'{puz_link}{source_link}</li>'
-            )
-
-        rows = []
-
-        rows.append("<h2>TODAY'S CROSSWORDS</h2>")
-
-        if latest_quick:
-            quick_name = ROOT / (
-                f"Quick_{latest_quick}_converted.txt"
-            )
-
-            if quick_name.exists():
-                puz_link = (
-                    f'<a href="/puz?file=Quick_{latest_quick}.puz">PUZ</a> '
-                    if (ROOT / f"Quick_{latest_quick}.puz").is_file() else ""
-                )
-                rows.append(
-                    f'<p><strong>Quick {latest_quick}</strong> '
-                    + puz_link
-                    + f' <a href="/rmr?file={html.escape(quick_name.name)}">RMR</a></p>'
-                )
-            else:
-                rows.append(
-                    f"<p><strong>Quick {latest_quick}</strong> "
-                    f"— not downloaded yet</p>"
-                )
-
-        if latest_cryptic:
-            cryptic_name = ROOT / (
-                f"Cryptic_{latest_cryptic}_converted.txt"
-            )
-
-            if cryptic_name.exists():
-                puz_link = (
-                    f'<a href="/puz?file=Cryptic_{latest_cryptic}.puz">PUZ</a> '
-                    if (ROOT / f"Cryptic_{latest_cryptic}.puz").is_file() else ""
-                )
-                rows.append(
-                    f'<p><strong>Cryptic {latest_cryptic}</strong> '
-                    + puz_link
-                    + f' <a href="/rmr?file={html.escape(cryptic_name.name)}">RMR</a></p>'
-                )
-            else:
-                rows.append(
-                    f"<p><strong>Cryptic {latest_cryptic}</strong> "
-                    f"— not downloaded yet</p>"
-                )
-
-        rows.append("<hr>")
-        rows.append("<h2>ARCHIVE</h2>")
-
-        rows.append("<h3>QUICK</h3>")
-        rows.append("<ul>")
-        for f in reversed(quick_files):
-            if latest_quick and f.name == (
-                f"Quick_{latest_quick}_converted.txt"
-            ):
-                continue
-            rows.append(link_for(f))
-        rows.append("</ul>")
-
-        rows.append("<h3>CRYPTIC</h3>")
-        rows.append("<ul>")
-        for f in reversed(cryptic_files):
-            if latest_cryptic and f.name == (
-                f"Cryptic_{latest_cryptic}_converted.txt"
-            ):
-                continue
-            rows.append(link_for(f))
+        rows.extend(["<hr>", "<h2>ARCHIVE</h2>", "<h3>QUICK</h3>", "<ul>"])
+        rows.extend(link_for(path) for path in reversed(quick_files))
+        rows.extend(["</ul>", "<h3>CRYPTIC</h3>", "<ul>"])
+        rows.extend(link_for(path) for path in reversed(cryptic_files))
         rows.append("</ul>")
 
         page = f"""<!DOCTYPE html>
 <html>
-<head>
-<meta charset="UTF-8">
-<title>Psion Sidecar</title>
-</head>
-
+<head><meta charset="UTF-8"><title>Psion Sidecar</title></head>
 <body>
-
 <h1>THE GUARDIAN CROSSWORDS</h1>
-
 <p><a href="/">BACK TO PSION HOME</a></p>
-
 <hr>
-
 <h2>GET A CROSSWORD</h2>
-
-<p>
-<small>
-(NB: Use Reload All in Psion menu to refresh list)
-</small>
-</p>
-
+<p><small>(NB: Use Reload All in Psion menu to refresh list)</small></p>
 <form action="/request" method="get">
-
-<p>
-Quick number (range: {QUICK_MIN}-{quick_high}):<br>
+<p>Quick number (range: {QUICK_MIN}-{quick_high}):<br>
 <input type="hidden" name="kind" value="quick">
-<input type="text" name="number" size="8">
-<input type="submit" value="GET">
-</p>
-
+<input type="text" name="number" size="8"><input type="submit" value="GET"></p>
 </form>
-
 <form action="/request" method="get">
-
-<p>
-Cryptic number (range: {CRYPTIC_MIN}-{cryptic_high}):<br>
+<p>Cryptic number (range: {CRYPTIC_MIN}-{cryptic_high}):<br>
 <input type="hidden" name="kind" value="cryptic">
-<input type="text" name="number" size="8">
-<input type="submit" value="GET">
-</p>
-
+<input type="text" name="number" size="8"><input type="submit" value="GET"></p>
 </form>
-
 <hr>
-
 {chr(10).join(rows)}
-
-<hr>
-
-<p><a href="/">BACK TO PSION HOME</a></p>
-
-<p>
-<strong>Psion Sidecar</strong><br>
-Shredder61 - 2026
-</p>
-
-</body>
-</html>
-"""
+<hr><p><a href="/">BACK TO PSION HOME</a></p>
+<p><strong>Psion Sidecar</strong><br>Shredder61 - 2026</p>
+</body></html>"""
 
         data = page.encode("utf-8")
-
         self.send_response(200)
-        self.send_header(
-            "Content-Type",
-            "text/html; charset=utf-8"
-        )
-        self.send_header(
-            "Content-Length",
-            str(len(data))
-        )
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
 
