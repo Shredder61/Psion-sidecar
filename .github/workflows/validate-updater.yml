@@ -5,7 +5,7 @@ on:
     paths:
       - "scripts/update-psion-sidecar"
       - "tests/test-update-psion-sidecar.sh"
-      - "tests/test-crossword-rmr.py"
+      - "tests/test_guardian_puz_workflow.py"
       - "sidecar_web.py"
       - ".github/workflows/validate-updater.yml"
   push:
@@ -15,7 +15,7 @@ on:
     paths:
       - "scripts/update-psion-sidecar"
       - "tests/test-update-psion-sidecar.sh"
-      - "tests/test-crossword-rmr.py"
+      - "tests/test_guardian_puz_workflow.py"
       - "sidecar_web.py"
       - ".github/workflows/validate-updater.yml"
 
@@ -51,4 +51,4 @@ jobs:
         run: bash tests/test-update-psion-sidecar.sh
 
       - name: Test converted crossword links
-        run: python3 tests/test-crossword-rmr.py
+        run: python3 -m unittest tests.test_guardian_puz_workflow -v
