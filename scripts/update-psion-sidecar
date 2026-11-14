@@ -8,6 +8,7 @@ APP="/opt/psion-sidecar"
 SERVICE="psion-sidecar.service"
 BACKUP_DIR="/var/backups/psion-sidecar"
 REPO_USER="pi"
+UPDATER_PATH="/usr/local/sbin/update-psion-sidecar"
 SOURCE_DIR=""
 CROSSWORDS="$APP/crosswords"
 FILES=(
@@ -25,7 +26,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-for command in git python3 tar install curl runuser systemctl; do
+for command in git python3 tar install curl runuser systemctl cp mv cmp; do
     command -v "$command" >/dev/null 2>&1 || {
         echo "ERROR: Required command not found: $command"
         exit 1
@@ -74,6 +75,11 @@ SOURCE_DIR="$(mktemp -d /tmp/psion-sidecar-update.XXXXXX)"
 echo "Preparing source commit: ${SOURCE_COMMIT:0:12}"
 runuser -u "$REPO_USER" -- git -C "$REPO" archive origin/main | tar -x -C "$SOURCE_DIR"
 
+if [[ ! -f "$SOURCE_DIR/scripts/update-psion-sidecar" ]]; then
+    echo "ERROR: Missing scripts/update-psion-sidecar in fetched GitHub main. No application files changed."
+    exit 1
+fi
+
 echo "Checking required files..."
 for file in "${FILES[@]}"; do
     if [[ ! -f "$SOURCE_DIR/$file" ]]; then
@@ -90,6 +96,19 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP="$BACKUP_DIR/application-$STAMP.tar.gz"
 tar -czf "$BACKUP" -C "$APP" "${FILES[@]}"
 echo "Backup: $BACKUP"
+
+UPDATER_BACKUP="$BACKUP_DIR/update-psion-sidecar-$STAMP"
+if [[ ! -f "$UPDATER_PATH" ]]; then
+    echo "ERROR: Installed updater not found at $UPDATER_PATH"
+    exit 1
+fi
+
+cp -p "$UPDATER_PATH" "$UPDATER_BACKUP"
+if ! cmp -s "$UPDATER_PATH" "$UPDATER_BACKUP"; then
+    echo "ERROR: System updater backup verification failed. No application files changed."
+    exit 1
+fi
+echo "Updater backup: $UPDATER_BACKUP"
 
 rollback() {
     trap - ERR
@@ -111,6 +130,20 @@ rollback() {
         echo "Backup retained at: $BACKUP"
         exit 1
     fi
+
+    if ! install -o root -g root -m 0755 "$UPDATER_BACKUP" "${UPDATER_PATH}.restore"; then
+        echo "CRITICAL: Could not prepare restoration of the previous updater."
+        echo "The service has been left stopped."
+        exit 1
+    fi
+
+    if ! mv -f "${UPDATER_PATH}.restore" "$UPDATER_PATH"; then
+        echo "CRITICAL: Could not restore the previous updater."
+        echo "The service has been left stopped."
+        exit 1
+    fi
+
+    echo "Previous system updater restored."
 
     if systemctl start "$SERVICE"; then
         echo "Previous application files restored and service restart succeeded."
@@ -159,6 +192,13 @@ if ! runuser -u sidecar -- test -w "$CROSSWORDS"; then
     echo "ERROR: Sidecar started, but crossword storage is not writable."
     rollback
 fi
+
+echo "Installing updated system updater..."
+install -o root -g root -m 0755 \
+    "$SOURCE_DIR/scripts/update-psion-sidecar" \
+    "${UPDATER_PATH}.new"
+mv -f "${UPDATER_PATH}.new" "$UPDATER_PATH"
+echo "System updater synchronised with GitHub main."
 
 echo
 echo "SUCCESS: Sidecar updated and responding."

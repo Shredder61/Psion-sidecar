@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/update-psion-sidecar"
       - "tests/test-update-psion-sidecar.sh"
+      - "tests/test-update-termux-sidecar.sh"
       - "tests/test_guardian_puz_workflow.py"
       - "sidecar_web.py"
       - ".github/workflows/validate-updater.yml"
@@ -15,6 +16,7 @@ on:
     paths:
       - "scripts/update-psion-sidecar"
       - "tests/test-update-psion-sidecar.sh"
+      - "tests/test-update-termux-sidecar.sh"
       - "tests/test_guardian_puz_workflow.py"
       - "sidecar_web.py"
       - ".github/workflows/validate-updater.yml"
@@ -49,6 +51,8 @@ jobs:
 
       - name: Exercise updater success and rollback paths
         run: bash tests/test-update-psion-sidecar.sh
+      - name: Exercise Termux updater success and rollback paths
+        run: bash tests/test-update-termux-sidecar.sh
 
       - name: Test converted crossword links
         run: python3 -m unittest tests.test_guardian_puz_workflow -v

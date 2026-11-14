@@ -187,7 +187,6 @@ write_fixture() {
     for file in \
         sidecar_web.py \
         guardian_pi.py \
-        guardian_to_puz.py \
         guardian_to_puz.py
     do
         printf 'VERSION = "%s"\n' "$version" \
@@ -212,7 +211,7 @@ RUN
 
 seed_old_install() {
     for file in \
-        sidecar_web.py guardian_pi.py guardian_to_puz.py guardian_to_puz.py \
+        sidecar_web.py guardian_pi.py guardian_to_puz.py \
         software_index.json epoc16_index.json epoc32_index.json
     do
         printf 'VERSION = "old"\n' > "$TARGET/$file"
@@ -331,5 +330,36 @@ fi
 echo "PASS: corrupted backup rejected; original files and running service left untouched"
 
 echo
+
+echo
+echo "=== Test 6: missing PUZ converter rejected before service stop ==="
+
+seed_old_install
+write_fixture "new"
+rm "$FIXTURE/Sidecar-main/guardian_to_puz.py"
+tar -czf "$ARCHIVE" -C "$FIXTURE" Sidecar-main
+: > "$TEST_SV_LOG"
+
+if run_updater > "$TMP/missing-converter.log" 2>&1; then
+    echo "FAIL: missing PUZ converter was accepted"
+    exit 1
+fi
+
+grep -q 'Required file missing from GitHub source: guardian_to_puz.py' "$TMP/missing-converter.log"
+grep -q 'VERSION = "old"' "$TARGET/sidecar_web.py"
+grep -q 'VERSION = "old"' "$TARGET/guardian_pi.py"
+grep -q '^status '"$SERVICE"'$' "$TEST_SV_LOG"
+
+if grep -q '^down '"$SERVICE"'$' "$TEST_SV_LOG"; then
+    echo "FAIL: service was stopped despite missing PUZ converter"
+    exit 1
+fi
+
+if grep -q '^up '"$SERVICE"'$' "$TEST_SV_LOG"; then
+    echo "FAIL: service was restarted despite missing PUZ converter"
+    exit 1
+fi
+
+echo "PASS: missing PUZ converter rejected; old installation and running service untouched"
 
 echo "All Termux updater tests passed."
