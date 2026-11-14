@@ -35,11 +35,23 @@ cat > "$MOCK_BIN/install" <<'MOCK'
 #!/usr/bin/env bash
 set -eu
 last="${!#}"
-if [[ -f "${TEST_INSTALL_FAIL_FILE:?}" && "$last" == */guardian_pi.py ]]; then
-    rm -f "$TEST_INSTALL_FAIL_FILE"
-    exit 1
+if [[ -f "${TEST_INSTALL_FAIL_FILE:?}" ]]; then
+    fail_target="$(cat "$TEST_INSTALL_FAIL_FILE")"
+    if [[ "$last" == *"$fail_target" ]]; then
+        rm -f "$TEST_INSTALL_FAIL_FILE"
+        exit 1
+    fi
 fi
 exec /usr/bin/install "$@"
+MOCK
+cat > "$MOCK_BIN/cmp" <<'MOCK'
+#!/usr/bin/env bash
+set -eu
+if [[ -n "${TEST_CMP_FAIL_FILE:-}" && -f "$TEST_CMP_FAIL_FILE" ]]; then
+    rm -f "$TEST_CMP_FAIL_FILE"
+    exit 1
+fi
+exec /usr/bin/cmp "$@"
 MOCK
 
 cat > "$MOCK_BIN/curl" <<'MOCK'
@@ -63,6 +75,8 @@ git -C "$SEED" config user.email "updater-test@example.invalid"
 
 write_fixture() {
     local version="$1"
+    mkdir -p "$SEED/scripts"
+    cp "$ROOT_DIR/scripts/update-psion-sidecar" "$SEED/scripts/update-psion-sidecar"
     printf 'VERSION = "%s"\n' "$version" > "$SEED/sidecar_web.py"
     printf 'VERSION = "%s"\n' "$version" > "$SEED/guardian_pi.py"
     printf 'VERSION = "%s"\n' "$version" > "$SEED/guardian_to_puz.py"
@@ -96,6 +110,13 @@ sudo chmod 0755 "$APP" "$APP/crosswords"
 
 # Test against isolated paths and mocked systemctl/curl/install commands.
 TEST_UPDATER="$TMP/update-psion-sidecar"
+TEST_UPDATER_PATH="$TMP/usr-local-sbin/update-psion-sidecar"
+mkdir -p "$(dirname "$TEST_UPDATER_PATH")"
+
+# Seed an old system updater for the self-update and rollback tests.
+printf 'OLD UPDATER\n' | sudo tee "$TEST_UPDATER_PATH" >/dev/null
+sudo chmod 0755 "$TEST_UPDATER_PATH"
+
 CURRENT_USER="$(id -un)"
 CURRENT_GROUP="$(id -gn)"
 
@@ -107,6 +128,8 @@ reset_installed_files() {
         printf 'VERSION = "old"\n' > "$APP/$file"
     done
     sudo chown root:root "$APP/"*
+    printf 'OLD UPDATER\n' | sudo tee "$TEST_UPDATER_PATH" >/dev/null
+    sudo chmod 0755 "$TEST_UPDATER_PATH"
 }
 
 sed \
@@ -114,12 +137,14 @@ sed \
   -e "s|^APP=\"/opt/psion-sidecar\"|APP=\"$APP\"|" \
   -e "s|^BACKUP_DIR=\"/var/backups/psion-sidecar\"|BACKUP_DIR=\"$BACKUPS\"|" \
   -e "s|^REPO_USER=\"pi\"|REPO_USER=\"$CURRENT_USER\"|" \
+  -e "s|^UPDATER_PATH=\"/usr/local/sbin/update-psion-sidecar\"|UPDATER_PATH=\"$TEST_UPDATER_PATH\"|" \
   "$ROOT_DIR/scripts/update-psion-sidecar" > "$TEST_UPDATER"
 chmod 0755 "$TEST_UPDATER"
 
 export TEST_SYSTEMCTL_LOG="$TMP/systemctl.log"
 export TEST_CURL_FAIL_FILE="$TMP/curl-fail"
 export TEST_INSTALL_FAIL_FILE="$TMP/install-fail"
+export TEST_CMP_FAIL_FILE="$TMP/cmp-fail"
 export PATH="$MOCK_BIN:$PATH"
 
 # Success: install the newly fetched commit without moving the checkout.
@@ -127,6 +152,8 @@ export PATH="$MOCK_BIN:$PATH"
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/success.log"
 grep -q 'SUCCESS: Sidecar updated and responding.' "$TMP/success.log"
 grep -q 'VERSION = "v2"' "$APP/sidecar_web.py"
+grep -q 'System updater synchronised with GitHub main.' "$TMP/success.log"
+grep -q 'System updater synchronised with GitHub main.' "$TEST_UPDATER_PATH"
 test "$(git -C "$REPO" rev-parse HEAD)" = "$OLD_CHECKOUT"
 grep -q 'Local checkout left unchanged.' "$TMP/success.log"
 echo "PASS: successful update installs fetched version without moving local checkout"
@@ -134,7 +161,7 @@ echo "PASS: successful update installs fetched version without moving local chec
 # Failure 1: force an install command to fail and exercise the ERR trap.
 reset_installed_files
 sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
-touch "$TEST_INSTALL_FAIL_FILE"
+printf 'guardian_pi.py\n' > "$TEST_INSTALL_FAIL_FILE"
 set +e
 # shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/install-failure.log" 2>&1
@@ -144,6 +171,8 @@ test "$status" -ne 0
 grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/install-failure.log"
 grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
 grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
+grep -q 'OLD UPDATER' "$TEST_UPDATER_PATH"
+grep -q 'Previous system updater restored.' "$TMP/install-failure.log"
 echo "PASS: install-command failure triggers ERR-trap rollback"
 
 # Failure 2: fail the homepage health check and verify explicit rollback.
@@ -161,5 +190,53 @@ grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/health-f
 grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
 grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
 echo "PASS: health-check failure restores previous files and attempts service restart"
+
+# Failure 3: fail installation of the replacement system updater.
+reset_installed_files
+sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
+printf 'update-psion-sidecar.new\n' > "$TEST_INSTALL_FAIL_FILE"
+set +e
+sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/updater-failure.log" 2>&1
+status=$?
+set -e
+test "$status" -ne 0
+grep -q 'UPDATE FAILED. Restoring the previous application files' "$TMP/updater-failure.log"
+grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
+grep -q 'OLD UPDATER' "$TEST_UPDATER_PATH"
+grep -q 'Previous system updater restored.' "$TMP/updater-failure.log"
+grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"
+echo "PASS: system-updater installation failure restores both application and updater"
+
+# Failure: reject a corrupted previous-updater backup before stopping Sidecar.
+reset_installed_files
+sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
+touch "$TEST_CMP_FAIL_FILE"
+
+set +e
+sudo env PATH="$PATH" \
+    TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" \
+    TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" \
+    TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" \
+    TEST_CMP_FAIL_FILE="$TEST_CMP_FAIL_FILE" \
+    bash "$TEST_UPDATER" > "$TMP/backup-verification-failure.log" 2>&1
+status=$?
+set -e
+
+test "$status" -ne 0
+grep -q 'System updater backup verification failed.' "$TMP/backup-verification-failure.log"
+grep -q 'VERSION = "old"' "$APP/sidecar_web.py"
+grep -q 'OLD UPDATER' "$TEST_UPDATER_PATH"
+
+if grep -q '^stop psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"; then
+    echo "FAIL: Sidecar was stopped after updater-backup verification failed"
+    exit 1
+fi
+
+if grep -q '^start psion-sidecar.service$' "$TEST_SYSTEMCTL_LOG"; then
+    echo "FAIL: Sidecar was restarted after updater-backup verification failed"
+    exit 1
+fi
+
+echo "PASS: failed updater-backup verification aborts before stopping Sidecar"
 
 echo "All isolated updater tests passed."
