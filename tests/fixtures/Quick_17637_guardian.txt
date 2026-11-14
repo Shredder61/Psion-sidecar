@@ -1,0 +1,75 @@
+Blanks
+
+Line 1: A M
+Line 2: B D F H J L
+Line 3: J
+Line 4: B C D F H J L
+Line 5: F
+Line 6: B D F H I J L
+Line 7: G
+Line 8: B D E F H J L
+Line 9: H
+Line 10: B D F H J K L
+Line 11: D
+Line 12: B D F H J L
+Line 13: A M
+
+Across
+
+(1B) Horrific (11)
+(3A) Theatre (9)
+(3K) Resentment (3)
+(5A) African equine (5)
+(5G) Yellowish-brown (7)
+(7A) Sharp-edged (6)
+(7H) Snap taker (6)
+(9A) Coupon (7)
+(9I) Towel off dishes etc (3,2)
+(11A) Egg (3)
+(11E) In which goods shipped from a remote store (4,5)
+(13B) Move the constituency goalposts? (11)
+
+Down
+
+(1C) Tot of whisky, eg (3)
+(1E) Iced dessert with egg yolks, fruit, sugar and cream (7)
+(1G) Shape shifter (6)
+(1I) Gulf (5)
+(1K) Slow (9)
+(2A) Irregular stone slabs, pieced together (5,6)
+(2M) NY green space (7,4)
+(5C) Charcoal block (9)
+(7I) Etc (3,2,2)
+(8G) Banality (6)
+(9E) Four-base hit in baseball (5)
+(11K) Female rabbit (3)
+
+Solutions
+
+Across solutions
+(1B) UNSPEAKABLE
+(3A) REPERTORY
+(3K) IRE
+(5A) ZEBRA
+(5G) BISCUIT
+(7A) POINTY
+(7H) CAMERA
+(9A) VOUCHER
+(9I) DRYUP
+(11A) NIT
+(11E) MAILORDER
+(13B) GERRYMANDER
+
+Down solutions
+(1C) NIP
+(1E) PARFAIT
+(1G) AMOEBA
+(1I) ABYSS
+(1K) LEISURELY
+(2A) CRAZYPAVING
+(2M) CENTRALPARK
+(5C) BRIQUETTE
+(7I) ANDSOON
+(8G) TRUISM
+(9E) HOMER
+(11K) DOE

@@ -25,7 +25,7 @@ sh "$ROOT/scripts/install-termux.sh" --target "$TARGET"
 for file in \
     sidecar_web.py \
     guardian_pi.py \
-    crossword_converter.py \
+    guardian_to_puz.py \
     software_index.json \
     epoc16_index.json \
     epoc32_index.json
@@ -66,7 +66,7 @@ echo "PASS: existing service protected"
 FILES="
 sidecar_web.py
 guardian_pi.py
-crossword_converter.py
+guardian_to_puz.py
 software_index.json
 epoc16_index.json
 epoc32_index.json

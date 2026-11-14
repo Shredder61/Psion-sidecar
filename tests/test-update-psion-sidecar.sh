@@ -65,7 +65,7 @@ write_fixture() {
     local version="$1"
     printf 'VERSION = "%s"\n' "$version" > "$SEED/sidecar_web.py"
     printf 'VERSION = "%s"\n' "$version" > "$SEED/guardian_pi.py"
-    printf 'VERSION = "%s"\n' "$version" > "$SEED/crossword_converter.py"
+    printf 'VERSION = "%s"\n' "$version" > "$SEED/guardian_to_puz.py"
     printf '{"version":"%s"}\n' "$version" > "$SEED/epoc16_index.json"
     printf '{"version":"%s"}\n' "$version" > "$SEED/epoc32_index.json"
     printf '{"version":"%s"}\n' "$version" > "$SEED/software_index.json"
@@ -87,7 +87,7 @@ git -C "$SEED" push origin main >/dev/null
 
 # Seed the installed app with old files. The updater should correct the
 # crossword directory's ownership and mode without touching its contents.
-for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
+for file in sidecar_web.py guardian_pi.py guardian_to_puz.py epoc16_index.json epoc32_index.json software_index.json; do
     printf 'VERSION = "old"\n' > "$APP/$file"
 done
 sudo chown root:root "$APP"
@@ -103,7 +103,7 @@ reset_installed_files() {
     # The updater installs files as root; temporarily return ownership so
     # the unprivileged test runner can seed the next test's old version.
     sudo chown "$CURRENT_USER:$CURRENT_GROUP" "$APP/"*
-    for file in sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json; do
+    for file in sidecar_web.py guardian_pi.py guardian_to_puz.py epoc16_index.json epoc32_index.json software_index.json; do
         printf 'VERSION = "old"\n' > "$APP/$file"
     done
     sudo chown root:root "$APP/"*

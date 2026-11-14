@@ -19,7 +19,7 @@ From the repository root, run:
 
 ```bash
 sudo mkdir -p /opt/psion-sidecar
-sudo cp sidecar_web.py guardian_pi.py crossword_converter.py epoc16_index.json epoc32_index.json software_index.json /opt/psion-sidecar/
+sudo cp sidecar_web.py guardian_pi.py guardian_to_puz.py epoc16_index.json epoc32_index.json software_index.json /opt/psion-sidecar/
 sudo mkdir -p /opt/psion-sidecar/crosswords
 sudo install -m 0644 systemd/psion-sidecar.service /etc/systemd/system/psion-sidecar.service
 ```
@@ -33,7 +33,7 @@ The service file assumes the installation path `/opt/psion-sidecar`. If you choo
 ```bash
 cd /opt/psion-sidecar
 python3 --version
-python3 -m py_compile sidecar_web.py guardian_pi.py crossword_converter.py
+python3 -m py_compile sidecar_web.py guardian_pi.py guardian_to_puz.py
 python3 sidecar_web.py
 ```
 

@@ -288,15 +288,21 @@ def make_puz(puzzle, title="Guardian Crossword", author="The Guardian",
     return bytes(header) + body
 
 
-def convert_file(source_path, output_path, title=None):
-    source_path = Path(source_path)
+def convert_source(source: str, output_path, title="Guardian Crossword"):
+    """Convert Guardian source held in memory and save only the PUZ file."""
     output_path = Path(output_path)
-    puzzle = parse_guardian_source(source_path.read_text(encoding="utf-8"))
-    title = title or f"Guardian Crossword - {source_path.stem.replace('_', ' ')}"
+    puzzle = parse_guardian_source(source)
     data = make_puz(puzzle, title=title)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(data)
     return puzzle
+
+
+def convert_file(source_path, output_path, title=None):
+    """CLI helper for converting an existing source file."""
+    source_path = Path(source_path)
+    title = title or f"Guardian Crossword - {source_path.stem.replace('_', ' ')}"
+    return convert_source(source_path.read_text(encoding="utf-8"), output_path, title)
 
 
 def main():

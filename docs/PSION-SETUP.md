@@ -74,23 +74,17 @@ software you download.
 
 ## 4. Download a Guardian crossword
 
-1. On the Sidecar homepage, choose the Quick or Cryptic crossword option.
-2. Enter the crossword number and submit the request.
-3. When the request completes, choose the version you need:
-   - **RMR version** (preferred) — converted by Sidecar on the hosting device and
-     intended to be opened directly in a compatible RMR / FatCatz crossword
-     application.
-   - **Original** — the original text file, intended for conversion before use
-     in a compatible RMR / FatCatz crossword application.
-4. Select the download link and follow the browser's prompts to save the file
-   on the Psion. You can also use the local archive to retrieve a crossword
-   already stored on the device hosting Sidecar.
+1. On the Sidecar homepage, choose the Guardian crossword link.
+2. Enter the Quick or Cryptic crossword number and submit the request.
+3. Sidecar fetches the Guardian puzzle, converts it in memory and saves a
+   standard Across Lite `.puz` file on the host.
+4. Select **DOWNLOAD ACROSS LITE PUZZLE (.PUZ)** and follow the browser's
+   prompts to save the file on the Psion. The local archive also lists
+   previously downloaded PUZ files.
 
-Example original filenames include `Quick_17028.txt` and
-`Cryptic_30103.txt`. The converted RMR file is labelled separately in the
-Sidecar interface.
+Example filenames include `Quick_17028.puz` and `Cryptic_30103.puz`.
 
-![Guardian crossword archive](images/crossword-archive.jpg)
+![Guardian PUZ archive](images/crossword-archive.jpg)
 
 ![Requesting a Guardian crossword](images/crossword-request.jpg)
 
@@ -98,44 +92,17 @@ Sidecar interface.
 
 ![Downloading a crossword](images/crossword-download.jpg)
 
-![Selecting the RMR-format crossword](images/crossword-rmr-version.jpg)
+## 5. Open the crossword
 
-## 5. Open or convert the crossword on the Psion
-
-### If you downloaded the RMR version
-
-Open the downloaded converted file directly in a compatible RMR / FatCatz
-crossword application. Use the application's **File → Open** command and
-browse to the folder where you saved it.
+Open the downloaded `.puz` file in RMR Crossword or FatCatz Crossword. Use
+the application's **File → Open** command and browse to the folder where
+you saved it.
 
 ![Opening the converted crossword in RMR](images/crossword-open-in-rmr.jpg)
 
 ![Crossword save dialogue](images/crossword-save-dialog.jpg)
 
 ![Saved crossword](images/crossword-saved.jpg)
-
-### If you downloaded the original text file
-
-The original Guardian text file must be converted before it can be opened in
-RMR / FatCatz Crossword.
-
-1. Transfer the original text file to a location accessible on the Psion.
-2. Open the separate OPL converter, `crossword_converter_v01.txt`, in your
-   Psion OPL environment and save it as an `.opl` program if you have not
-   already prepared it.
-3. Run the converter and follow its prompts to select and convert the
-   crossword text file.
-4. Open the resulting converted crossword in RMR / FatCatz Crossword.
-
-The screenshots below show the Psion-side import and conversion workflow.
-This OPL process is separate from the conversion performed by Sidecar on
-the device hosting Sidecar.
-
-![Selecting a crossword to import](images/Import%20crossword.png)
-
-![Crossword conversion on the Psion](images/Crossword%20conversion.png)
-
-![Cryptic crossword after import](images/Imported%20crossword%20-%20cryptic.png)
 
 ## Notes
 

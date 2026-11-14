@@ -13,7 +13,7 @@ CROSSWORDS="$APP/crosswords"
 FILES=(
     sidecar_web.py
     guardian_pi.py
-    crossword_converter.py
+    guardian_to_puz.py
     epoc16_index.json
     epoc32_index.json
     software_index.json
@@ -83,7 +83,7 @@ for file in "${FILES[@]}"; do
 done
 
 echo "Checking Python syntax..."
-python3 -m py_compile "$SOURCE_DIR/sidecar_web.py" "$SOURCE_DIR/guardian_pi.py" "$SOURCE_DIR/crossword_converter.py"
+python3 -m py_compile "$SOURCE_DIR/sidecar_web.py" "$SOURCE_DIR/guardian_pi.py" "$SOURCE_DIR/guardian_to_puz.py"
 
 mkdir -p "$BACKUP_DIR"
 STAMP="$(date +%Y%m%d-%H%M%S)"
