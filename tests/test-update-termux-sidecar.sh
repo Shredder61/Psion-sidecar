@@ -187,7 +187,8 @@ write_fixture() {
     for file in \
         sidecar_web.py \
         guardian_pi.py \
-        crossword_converter.py
+        crossword_converter.py \
+        guardian_to_puz.py
     do
         printf 'VERSION = "%s"\n' "$version" \
             > "$FIXTURE/Sidecar-main/$file"
@@ -211,7 +212,7 @@ RUN
 
 seed_old_install() {
     for file in \
-        sidecar_web.py guardian_pi.py crossword_converter.py \
+        sidecar_web.py guardian_pi.py crossword_converter.py guardian_to_puz.py \
         software_index.json epoc16_index.json epoc32_index.json
     do
         printf 'VERSION = "old"\n' > "$TARGET/$file"
@@ -235,6 +236,7 @@ echo "=== Test 1: successful update ==="
 run_updater > "$TMP/success.log"
 grep -q 'SUCCESS: Termux Sidecar updated and responding.' "$TMP/success.log"
 grep -q 'VERSION = "new"' "$TARGET/sidecar_web.py"
+grep -q 'VERSION = "new"' "$TARGET/guardian_to_puz.py"
 grep -q '"version":"new"' "$TARGET/software_index.json"
 grep -q 'keep this crossword' "$TARGET/crosswords/keep.txt"
 grep -Fxq "ls-remote $TEST_REPOSITORY refs/heads/main" "$TEST_GIT_LOG"

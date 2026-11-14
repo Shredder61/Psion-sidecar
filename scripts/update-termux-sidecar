@@ -17,6 +17,7 @@ FILES="
 sidecar_web.py
 guardian_pi.py
 crossword_converter.py
+guardian_to_puz.py
 software_index.json
 epoc16_index.json
 epoc32_index.json
@@ -209,7 +210,7 @@ for file in $FILES; do
 done
 
 echo "Checking Python syntax..."
-for file in sidecar_web.py guardian_pi.py crossword_converter.py; do
+for file in sidecar_web.py guardian_pi.py crossword_converter.py guardian_to_puz.py; do
     "$PYTHON" -m py_compile "$STAGE/$file" ||
         error "Python syntax check failed: $file"
 done
