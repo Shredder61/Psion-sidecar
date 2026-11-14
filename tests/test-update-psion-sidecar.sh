@@ -196,6 +196,7 @@ reset_installed_files
 sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
 printf 'update-psion-sidecar.new\n' > "$TEST_INSTALL_FAIL_FILE"
 set +e
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" TEST_INSTALL_FAIL_FILE="$TEST_INSTALL_FAIL_FILE" bash "$TEST_UPDATER" > "$TMP/updater-failure.log" 2>&1
 status=$?
 set -e
@@ -213,6 +214,7 @@ sudo truncate -s 0 "$TEST_SYSTEMCTL_LOG"
 touch "$TEST_CMP_FAIL_FILE"
 
 set +e
+# shellcheck disable=SC2024 # Redirect into the unprivileged test harness temp directory.
 sudo env PATH="$PATH" \
     TEST_SYSTEMCTL_LOG="$TEST_SYSTEMCTL_LOG" \
     TEST_CURL_FAIL_FILE="$TEST_CURL_FAIL_FILE" \
