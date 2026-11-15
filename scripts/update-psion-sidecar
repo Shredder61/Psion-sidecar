@@ -3,11 +3,25 @@
 # Install as /usr/local/sbin/update-psion-sidecar and run with sudo.
 set -Eeuo pipefail
 
+# Machine-specific checkout settings live outside the updater so this
+# exact script can be installed on every Raspberry Pi.
+CONFIG_FILE="/etc/default/psion-sidecar"
 REPO="/home/pi/Psion-sidecar"
+REPO_USER="pi"
+if [[ -f "$CONFIG_FILE" ]]; then
+    # This file must be owned by root and not writable by unprivileged users.
+    if [[ "$(stat -c '%U:%G' "$CONFIG_FILE")" != "root:root" ]] || \
+       [[ "$(stat -c '%a' "$CONFIG_FILE")" =~ [2367][0-7][0-7]$ ]]; then
+        echo "ERROR: $CONFIG_FILE must be owned by root:root and not group/world writable."
+        exit 1
+    fi
+    # shellcheck source=/etc/default/psion-sidecar
+    source "$CONFIG_FILE"
+fi
+
 APP="/opt/psion-sidecar"
 SERVICE="psion-sidecar.service"
 BACKUP_DIR="/var/backups/psion-sidecar"
-REPO_USER="pi"
 UPDATER_PATH="/usr/local/sbin/update-psion-sidecar"
 SOURCE_DIR=""
 CROSSWORDS="$APP/crosswords"
