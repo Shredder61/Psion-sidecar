@@ -16,6 +16,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
         echo "ERROR: $CONFIG_FILE must be owned by root:root and not group/world writable."
         exit 1
     fi
+    # shellcheck disable=SC1091
     # shellcheck source=/etc/default/psion-sidecar
     source "$CONFIG_FILE"
 fi
