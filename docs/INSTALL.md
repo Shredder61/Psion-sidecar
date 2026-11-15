@@ -123,9 +123,21 @@ If the service does not start or a crossword download fails, check the logs. A `
 
 The repository includes `scripts/update-psion-sidecar`, which fetches the latest `main` branch into a temporary staging directory, checks the Python files, backs up the installed application files, updates the service, and checks that the homepage responds. It also checks that the `sidecar` account can write to crossword storage before and after the update. It does not merge or advance your local Git checkout, so a failed installation cannot leave the checkout ahead of the files installed in `/opt/psion-sidecar`.
 
-The script assumes the repository is at `/home/pi/Psion-sidecar` and that the Linux account `pi` owns the Git checkout. If your checkout or account differs, edit `REPO` and `REPO_USER` near the top of the script before installing it.
+The updater code is identical on every Raspberry Pi. Machine-specific Git checkout settings are kept separately in the root-owned file `/etc/default/psion-sidecar`. The updater defaults to `/home/pi/Psion-sidecar` and user `pi`; create the configuration file only when your checkout path or owner differs.
 
-From the repository root, install it with:
+For example, for a checkout at `/home/inkypikitch/psion-sidecar-github` owned by `inkypikitch`, create:
+
+```bash
+sudo install -o root -g root -m 0644 /dev/null /etc/default/psion-sidecar
+sudo tee /etc/default/psion-sidecar >/dev/null <<'EOF'
+REPO="/home/inkypikitch/psion-sidecar-github"
+REPO_USER="inkypikitch"
+EOF
+```
+
+Use the equivalent values for your own checkout. The configuration file must be owned by `root:root` and must not be group- or world-writable. The updater checks these permissions before sourcing it.
+
+From the repository root, install the updater with:
 
 ```bash
 sudo install -o root -g root -m 0755 scripts/update-psion-sidecar /usr/local/sbin/update-psion-sidecar
