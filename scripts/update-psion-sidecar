@@ -10,13 +10,18 @@ REPO="/home/pi/Psion-sidecar"
 REPO_USER="pi"
 if [[ -f "$CONFIG_FILE" ]]; then
     # This file must be owned by root and not writable by unprivileged users.
+    CONFIG_MODE="$(stat -c '%a' "$CONFIG_FILE")"
     if [[ "$(stat -c '%U:%G' "$CONFIG_FILE")" != "root:root" ]] || \
-       [[ "$(stat -c '%a' "$CONFIG_FILE")" =~ [2367][0-7][0-7]$ ]]; then
+       (( (8#$CONFIG_MODE & 0022) != 0 )); then
         echo "ERROR: $CONFIG_FILE must be owned by root:root and not group/world writable."
         exit 1
     fi
     # shellcheck source=/etc/default/psion-sidecar
     source "$CONFIG_FILE"
+fi
+if [[ -z "$REPO" || -z "$REPO_USER" ]]; then
+    echo "ERROR: REPO and REPO_USER must both be set in $CONFIG_FILE."
+    exit 1
 fi
 
 APP="/opt/psion-sidecar"
@@ -40,7 +45,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-for command in git python3 tar install curl runuser systemctl cp mv cmp; do
+for command in git python3 tar install curl runuser systemctl cp mv cmp stat; do
     command -v "$command" >/dev/null 2>&1 || {
         echo "ERROR: Required command not found: $command"
         exit 1
