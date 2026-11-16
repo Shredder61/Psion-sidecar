@@ -7,7 +7,7 @@ The same Sidecar application can be hosted on a **Raspberry Pi** or an **Android
 - Psion Community software browsing and downloads.
 - Local EPOC16 and EPOC32 software catalogue searches.
 - Psion-friendly search pages, news feeds and useful web resources.
-- Guardian Quick and Cryptic crossword downloads.
+- Guardian Quick, Cryptic, Weekend, and Prize crossword downloads.
 - Guardian crossword downloads converted to standard Across Lite (`.puz`) files, playable in RMR Crossword and FatCatz Crossword.
 - A local archive of previously downloaded crosswords.
 
@@ -47,7 +47,7 @@ After any update, check the Sidecar service status and open its homepage. Then t
 - A Psion Community software catalogue interface, including filtered program searches and download links.
 - Psion-friendly web resources, including access to FrogFind.
 - Example service definitions for Raspberry Pi (systemd) and Android / Termux (runit).
-- Guardian Quick and Cryptic crossword download requests.
+- Guardian Quick, Cryptic, Weekend, and Prize crossword download requests.
 - Guardian crossword downloads converted to standard Across Lite (`.puz`) files for opening in RMR Crossword or FatCatz Crossword.
 - A local archive containing PUZ downloads only.
 
@@ -100,9 +100,9 @@ If an individual download is saved with a `.bin` extension rather than its origi
 
 Please respect the provenance, copyright and redistribution terms of the indexed material and any linked software packages. Inclusion of catalogue indexes or download links does not grant permission to redistribute the software they describe.
 
-## Guardian Quick and Cryptic crossword downloads
+## The Guardian crossword downloads
 
-There are two main ways to download Guardian Quick and Cryptic crosswords for use on the Psion.
+There are two main ways to download The Guardian crosswords for use on the Psion.
 
 - **Standalone downloader:** Run `guardian_pi.py` directly on a suitable PC or Raspberry Pi to download and save a `.puz` file.
 - **Sidecar downloader:** Request a crossword through the Sidecar web interface on the Raspberry Pi or Android host. Sidecar generates a standard Across Lite (`.puz`) file for downloading and opening in RMR Crossword or FatCatz Crossword. Guardian source data is processed in memory and discarded; only the `.puz` output is retained.
@@ -114,14 +114,17 @@ Menu options:
 1	Download one crossword
 2	Download a batch of crosswords
 3	Download today's crossword
-4	Exit
+4	Refresh the archive list
+5	Exit
 
 The downloader currently records these Guardian archive limits in `guardian_pi.py`:
 
-- Quick: 9,093–17,583
-- Cryptic: 21,620–30,109
+- Quick: 9,093–17,638
+- Cryptic: 21,620–30,165
+- Weekend: 321-827
+- Prize: 21,628-30,164
 
-These values were last recorded as checked on 12 September 2026. They are archive limits stored in the source code, not a guarantee that every number is available or that the upper limits represent the latest published crosswords. The "today's crossword" option checks the Guardian for the latest number.
+These values were last recorded as checked on 16 November 2026. They are archive limits stored in the source code, not a guarantee that every number is available or that the upper limits represent the latest published crosswords. The "today's crossword" option checks the Guardian for the latest number.
 
 Before downloading, the program checks whether the crossword is already available locally and whether it is present in the Guardian's own archive. If a download is appropriate, it retrieves the puzzle and saves the resulting `.puz` file in the output directory.
 
@@ -138,8 +141,8 @@ Run the script with Python 3:
 python guardian_pi.py
 ```
 
-Choose **Download one crossword** or **Download a batch**, select Quick or
-Cryptic, enter the number (or starting number and count), and choose an output
+Choose **Download one crossword** or **Download a batch**, select Quick,
+Cryptic, Weekend, or Prize, enter the number (or starting number and count), and choose an output
 directory. Press Enter at the directory prompt to use the default `crosswords/`
 folder beside the script. **Download today's crossword** checks the Guardian
 series page for the latest number and saves that puzzle as a PUZ file.
@@ -156,19 +159,19 @@ The standalone downloader includes compatibility code for Python 2.7 and Python 
 
 ## Guardian crossword Sidecar downloader
 
-The Sidecar web interface uses `guardian_pi.py` to process crossword download requests and presents the results through a browser.
+The Sidecar web interface uses `guardian_pi.py` to process crossword download requests. When a request succeeds, Sidecar sends the generated Across Lite (`.puz`) file directly to the browser as a file attachment. There is no intermediate completion page, and Guardian source text is not sent to the Psion.
 
-After a successful request, the completion page provides a single download link for the generated Across Lite (`.puz`) file, with the message: “Downloaded and converted to PUZ format for opening in RMR or FatCatz Crosswords”.
+If the latest puzzle has been downloaded without solutions, the homepage offers the link “DOWNLOAD (You can check again later for published solutions)”. Selecting it requests the puzzle again from the Guardian. If solutions have since been published, Sidecar generates and serves the solved PUZ file; otherwise it serves the pending-solutions PUZ file.
 
-The archive lists previously downloaded Quick and Cryptic `.puz` files stored in the project's `crosswords/` directory. Each entry provides a PUZ download link.
+The archive lists previously downloaded crossword `.puz` files stored in the project's `crosswords/` directory. Each entry provides a direct PUZ download link.
 
 Guardian source data is fetched and converted in memory. Only the generated `.puz` file is saved or offered for download.
 
 ## Opening Guardian crosswords in RMR / FatCatz Crossword
 
-Sidecar converts the Guardian's native crossword data into a standard Across Lite (`.puz`) file. Select the PUZ download link on the completion page and save the file on the Psion. The resulting file can be opened directly in either RMR Crossword or FatCatz Crossword.
+Sidecar converts the Guardian's native crossword data into a standard Across Lite (`.puz`) file and sends it directly as a browser file attachment. When using the Psion, follow the browser's normal file-transfer prompts to save the received `.puz` file. The resulting file can be opened directly in either RMR Crossword or FatCatz Crossword.
 
-Sidecar saves and serves only the generated PUZ file.
+Sidecar saves and serves only the generated PUZ file; it does not display an intermediate completion page or deliver the Guardian source text to the Psion.
 
 - **Sidecar conversion:** Request the crossword, download the `.puz` file, and open it in RMR Crossword or FatCatz Crossword.
 
@@ -216,7 +219,7 @@ The server listens on `0.0.0.0` on port `8081` by default. Use `--port PORT` to 
 
 ## Features of the Sidecar homepage
 
-- Guardian Quick and Cryptic crossword download requests.
+- Guardian Quick, Cryptic, Weekend, and Prize crossword download requests.
 - Access to locally stored crossword files.
 - Psion Community software catalogue and download links, when the required index data is available.
 - FrogFind search access through the Sidecar host.

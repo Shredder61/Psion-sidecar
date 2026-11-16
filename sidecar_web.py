@@ -432,7 +432,7 @@ class SidecarHandler(SimpleHTTPRequestHandler):
                 "<html><body>"
                 "<h1>FrogFind error</h1>"
                 "<p>Could not contact FrogFind.</p>"
-                "<p><a href='/'>Back to Sidecar</a></p>"
+                "<p><a href='/'>Back to Psion Home</a></p>"
                 "</body></html>"
             )
 
@@ -516,6 +516,9 @@ Platform:
 </select>
 </p>
 <p>
+<a href="/">BACK TO PSION HOME</a>
+</p>
+<p>
 Filter:
 <input type="text"
        name="q"
@@ -534,7 +537,7 @@ Filter:
 <hr>
 
 <p>
-<a href="/">BACK TO SIDECAR</a>
+<a href="/">BACK TO PSION HOME</a>
 </p>
 
 </body>
@@ -566,7 +569,7 @@ Filter:
                 "<html><body>"
                 "<h1>Psion Software error</h1>"
                 "<p>Could not load the Psion Software Index.</p>"
-                "<p><a href='/'>Back to Sidecar</a></p>"
+                "<p><a href='/'>Back to Psion Home</a></p>"
                 "</body></html>"
             )
 
@@ -1119,7 +1122,7 @@ Language: {html.escape(languages)}
 </p>
 
 <p>
-<a href="/">BACK TO SIDECAR</a>
+<a href="/">BACK TO PSION HOME</a>
 </p>
 
 </body>
@@ -1455,7 +1458,7 @@ Language: {html.escape(languages)}
                 "<html><body>"
                 "<h1>Download error</h1>"
                 "<p>Could not download the SIS file.</p>"
-                "<p><a href='/'>Back to Sidecar</a></p>"
+                "<p><a href='/'>Back to Psion Home</a></p>"
                 "</body></html>"
             )
 
@@ -1480,9 +1483,12 @@ Language: {html.escape(languages)}
             self.wfile.write(data)
 
     def handle_puz(self, query):
-        """Serve a generated Across Lite puzzle as a download."""
+        """Serve a generated Guardian PUZ file as a download."""
         filename = query.get("file", [""])[0].strip()
-        if not re.fullmatch(r"(?:Quick|Cryptic)_\d+\.puz", filename):
+        if not re.fullmatch(
+            r"(?:Quick|Cryptic|Weekend|Prize)_\d+(?:_pending|_no_solutions)?\.puz",
+            filename,
+        ):
             self.send_error(400, "Invalid PUZ filename")
             return
         output_path = ROOT / filename
@@ -1510,68 +1516,80 @@ Language: {html.escape(languages)}
         self.wfile.write(data)
 
     def handle_request(self, query):
+        """Fetch/convert a requested Guardian puzzle and deliver its PUZ file."""
         import sys
 
         kind = query.get("kind", [""])[0].strip().lower()
         number_text = query.get("number", [""])[0].strip()
 
-        if kind not in ("quick", "cryptic"):
+        sys.path.insert(0, str(ROOT.parent))
+        try:
+            import guardian_pi
+        except Exception as exc:
+            self.send_error(503, "Guardian crossword service unavailable: " + str(exc))
+            return
+
+        if kind not in guardian_pi.SERIES:
             self.send_error(400, "Invalid crossword type")
             return
-        try:
-            number = int(number_text)
-        except ValueError:
+        if not number_text.isdigit():
             self.send_error(400, "Invalid crossword number")
             return
-        if number < 1:
-            self.send_error(400, "Invalid crossword number")
+        number = int(number_text)
+        info = guardian_pi.SERIES[kind]
+        label = info["label"]
+        if number < info["minimum"]:
+            self.send_error(
+                400,
+                "%s crossword numbers start at %d." % (label, info["minimum"]),
+            )
             return
 
-        stem = "%s_%d" % (kind.capitalize(), number)
+        # Refresh the upper bound from the relevant Guardian RSS feed.
+        try:
+            latest = guardian_pi.get_latest_number(kind)
+        except Exception as exc:
+            self.send_error(503, "Could not check the latest %s crossword: %s" % (label, exc))
+            return
+        if number > latest:
+            self.send_error(
+                400,
+                "%s crossword number is above the latest available number (%d)."
+                % (label, latest),
+            )
+            return
+
+        ROOT.mkdir(parents=True, exist_ok=True)
+        stem = "%s_%d" % (label, number)
         puz_path = ROOT / (stem + ".puz")
+        pending_path = ROOT / (stem + "_pending.puz")
 
         try:
-            sys.path.insert(0, str(ROOT.parent))
-            import guardian_pi
-
+            # A solved local file can be delivered immediately. Revisit a
+            # pending file so it can be upgraded when Guardian publishes its
+            # solutions.
             if not puz_path.is_file():
-                latest = guardian_pi.get_latest_number(kind)
-                minimum = guardian_pi.QUICK_MIN if kind == "quick" else guardian_pi.CRYPTIC_MIN
-                if number < minimum or number > latest:
-                    raise ValueError(
-                        "Crossword number outside available range (%d-%d)." %
-                        (minimum, latest)
-                    )
-                if kind == "quick":
-                    guardian_pi.QUICK_MAX = latest
-                else:
-                    guardian_pi.CRYPTIC_MAX = latest
                 if not guardian_pi.download_one(kind, number, str(ROOT)):
-                    raise RuntimeError("Guardian crossword download or PUZ conversion failed.")
-            if not puz_path.is_file():
-                raise RuntimeError("PUZ file was not created.")
-            status_text = "Guardian crossword ready. Download the PUZ file to open in RMR or FatCatz Crosswords."
+                    raise RuntimeError("Guardian download or PUZ conversion failed.")
+
+            if puz_path.is_file():
+                output_path = puz_path
+            elif pending_path.is_file():
+                output_path = pending_path
+            else:
+                # Keep compatibility with any explicitly unsolved output name.
+                no_solutions_path = ROOT / (stem + "_no_solutions.puz")
+                if no_solutions_path.is_file():
+                    output_path = no_solutions_path
+                else:
+                    raise RuntimeError("The converted PUZ file was not created.")
         except Exception as exc:
             self.send_error(422, "Crossword download or conversion failed: " + str(exc))
             return
 
-        message = (
-            "<html><head><title>Psion Sidecar</title></head><body>"
-            "<h1>Crossword ready</h1><p>%s</p>"
-            "<p><a href='/puz?file=%s'>DOWNLOAD ACROSS LITE PUZZLE (.PUZ)</a></p>"
-            "<p><a href='/guardian-crossword'>Back to Guardian Crosswords</a></p>"
-            "</body></html>"
-        ) % (html.escape(status_text), html.escape(puz_path.name))
-
-        data = message.encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
-        self.send_header("Pragma", "no-cache")
-        self.send_header("Expires", "0")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
+        # Send the binary attachment directly. The Psion browser receives the
+        # puzzle file, not Guardian source text or an intermediate results page.
+        self.send_puz_download(output_path)
 
     def send_homepage(self):
         page = """<!DOCTYPE html>
@@ -1617,68 +1635,94 @@ Language: {html.escape(languages)}
         self.wfile.write(data)
 
     def send_guardian_crossword(self):
+        """Show available Guardian series, today's puzzles and local archive."""
         import sys
         sys.path.insert(0, str(ROOT.parent))
 
         try:
-            from guardian_pi import (
-                get_latest_number, QUICK_MIN, QUICK_MAX,
-                CRYPTIC_MIN, CRYPTIC_MAX,
-            )
-        except Exception:
-            # Keep the archive usable even if the downloader module cannot load.
-            get_latest_number = None
-            QUICK_MIN, QUICK_MAX = 9093, 17583
-            CRYPTIC_MIN, CRYPTIC_MAX = 21620, 30109
+            import guardian_pi
+            series = guardian_pi.SERIES
+        except Exception as exc:
+            print("Could not load Guardian crossword downloader:", repr(exc))
+            self.send_error(503, "Guardian crossword service unavailable")
+            return
 
-        # Resolve each series independently: a temporary failure for one
-        # Guardian page must not hide the latest number for the other series.
-        latest_quick = None
-        latest_cryptic = None
-        if get_latest_number is not None:
+        ROOT.mkdir(parents=True, exist_ok=True)
+        latest_numbers = {}
+        for kind, info in series.items():
             try:
-                latest_quick = get_latest_number("quick")
+                latest_numbers[kind] = guardian_pi.get_latest_number(kind)
             except Exception as exc:
-                print("Could not determine latest Quick crossword:", repr(exc))
-            try:
-                latest_cryptic = get_latest_number("cryptic")
-            except Exception as exc:
-                print("Could not determine latest Cryptic crossword:", repr(exc))
-
-        quick_high = latest_quick or QUICK_MAX
-        cryptic_high = latest_cryptic or CRYPTIC_MAX
-        quick_files = sorted(
-            ROOT.glob("Quick_*.puz"),
-            key=lambda path: int(re.search(r"Quick_(\d+)\.puz$", path.name).group(1))
-        )
-        cryptic_files = sorted(
-            ROOT.glob("Cryptic_*.puz"),
-            key=lambda path: int(re.search(r"Cryptic_(\d+)\.puz$", path.name).group(1))
-        )
-
-        def link_for(path):
-            name = html.escape(path.name)
-            return f'<li>{name} — <a href="/puz?file={name}">DOWNLOAD PUZ</a></li>'
+                print("Could not determine latest %s crossword:" % info["label"], repr(exc))
+                latest_numbers[kind] = None
 
         rows = ["<h2>TODAY'S CROSSWORDS</h2>"]
-        for label, latest in (("Quick", latest_quick), ("Cryptic", latest_cryptic)):
-            if latest:
-                filename = f"{label}_{latest}.puz"
-                if (ROOT / filename).is_file():
-                    rows.append(
-                        f'<p><strong>{label} {latest}</strong> — '
-                        f'<a href="/puz?file={filename}">DOWNLOAD PUZ</a></p>'
-                    )
-                else:
-                    rows.append(f"<p><strong>{label} {latest}</strong> — not downloaded yet</p>")
+        for kind, info in series.items():
+            label = info["label"]
+            latest = latest_numbers[kind]
+            if latest is None:
+                rows.append(
+                    "<p><strong>%s</strong> — latest number currently unavailable</p>"
+                    % html.escape(label)
+                )
+                continue
+            filename = "%s_%d.puz" % (label, latest)
+            pending_filename = "%s_%d_pending.puz" % (label, latest)
+            if (ROOT / filename).is_file():
+                link = '<a href="/puz?file=%s">DOWNLOAD</a>' % quote(filename)
+                state = ""
+            elif (ROOT / pending_filename).is_file():
+                link = '<a href="/request?kind=%s&number=%d">DOWNLOAD (You can check again later for published solutions)</a>' % (quote(kind), latest)
+                state = " (solutions pending)"
+            else:
+                link = '<a href="/request?kind=%s&number=%d">DOWNLOAD</a>' % (quote(kind), latest)
+                state = ""
+            rows.append(
+                "<p><strong>%s %d</strong>%s — %s</p>"
+                % (html.escape(label), latest, state, link)
+            )
 
-        rows.extend(["<hr>", "<h2>ARCHIVE</h2>", "<h3>QUICK</h3>", "<ul>"])
-        rows.extend(link_for(path) for path in reversed(quick_files))
-        rows.extend(["</ul>", "<h3>CRYPTIC</h3>", "<ul>"])
-        rows.extend(link_for(path) for path in reversed(cryptic_files))
-        rows.append("</ul>")
+        rows.extend(["<hr>", "<h2>DOWNLOADED CROSSWORDS</h2>"])
+        for kind, info in series.items():
+            label = info["label"]
+            pattern = re.compile(
+                r"^%s_(\d+)(?:_(?:pending|no_solutions))?\.puz$"
+                % re.escape(label)
+            )
+            files = [path for path in ROOT.glob(label + "_*.puz") if pattern.match(path.name)]
+            files.sort(
+                key=lambda path: int(pattern.match(path.name).group(1)),
+                reverse=True,
+            )
+            rows.append("<h3>%s</h3>" % html.escape(label.upper()))
+            if not files:
+                rows.append("<p>No downloaded puzzles yet.</p>")
+                continue
+            rows.append("<ul>")
+            for path in files:
+                safe_name = html.escape(path.name, quote=True)
+                rows.append(
+                    '<li>%s — <a href="/puz?file=%s">DOWNLOAD PUZ</a></li>'
+                    % (safe_name, quote(path.name, safe=""))
+                )
+            rows.append("</ul>")
 
-        page = f"""<!DOCTYPE html>
+        form_rows = []
+        for kind, info in series.items():
+            label = html.escape(info["label"])
+            minimum = info["minimum"]
+            latest = latest_numbers[kind]
+            range_text = "%d-%d" % (minimum, latest) if latest else "from %d" % minimum
+            form_rows.append(
+                '<form action="/request" method="get">'
+                '<p><strong>%s</strong> number (archive range: %s):<br>'
+                '<input type="hidden" name="kind" value="%s">'
+                '<input type="text" name="number" size="8">'
+                '<input type="submit" value="GET"></p></form>'
+                % (label, html.escape(range_text), html.escape(kind, quote=True))
+            )
+
+        page = """<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>Psion Sidecar</title></head>
 <body>
@@ -1686,28 +1730,21 @@ Language: {html.escape(languages)}
 <p><a href="/">BACK TO PSION HOME</a></p>
 <hr>
 <h2>GET A CROSSWORD</h2>
-<p><small>(NB: Use Reload All in Psion menu to refresh list)</small></p>
-<form action="/request" method="get">
-<p>Quick number (range: {QUICK_MIN}-{quick_high}):<br>
-<input type="hidden" name="kind" value="quick">
-<input type="text" name="number" size="8"><input type="submit" value="GET"></p>
-</form>
-<form action="/request" method="get">
-<p>Cryptic number (range: {CRYPTIC_MIN}-{cryptic_high}):<br>
-<input type="hidden" name="kind" value="cryptic">
-<input type="text" name="number" size="8"><input type="submit" value="GET"></p>
-</form>
+<p>Choose a crossword and enter its Guardian number. The converted PUZ file will be sent directly to your Psion.</p>
+%s
 <hr>
-{chr(10).join(rows)}
+%s
 <hr><p><a href="/">BACK TO PSION HOME</a></p>
 <p><strong>Psion Sidecar</strong><br>Shredder61 - 2026</p>
-</body></html>"""
+</body></html>""" % ("\n".join(form_rows), "\n".join(rows))
 
         data = page.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(data)
 
