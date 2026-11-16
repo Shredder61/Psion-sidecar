@@ -231,13 +231,20 @@ def make_puz(puzzle, title="Guardian Crossword", author="The Guardian",
     solution = "".join(rows).encode("ascii")
     player = bytes(ord("-") if ch != "." else ord(".") for ch in solution)
 
-    ordered_clues = []
-    for direction, starts, clue_map in (
-        ("Across", across_starts, puzzle["across_clues"]),
-        ("Down", down_starts, puzzle["down_clues"]),
+    # Across Lite stores clue strings in numerical slot order, not as
+    # two separate Across-then-Down blocks. When a cell starts both entries,
+    # its Across clue precedes its Down clue.
+    numbered_clues = []
+    for direction_order, starts, clue_map in (
+        (0, across_starts, puzzle["across_clues"]),
+        (1, down_starts, puzzle["down_clues"]),
     ):
-        for _number, coord in starts:
-            ordered_clues.append(clue_map[coord])
+        for number, coord in starts:
+            numbered_clues.append(
+                (number, direction_order, clue_map[coord])
+            )
+    numbered_clues.sort(key=lambda item: (item[0], item[1]))
+    ordered_clues = [clue for _number, _direction, clue in numbered_clues]
 
     title_b, author_b, copyright_b = map(
         _puz_text, (title, author, copyright_text)
