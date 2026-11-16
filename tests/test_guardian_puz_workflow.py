@@ -90,6 +90,35 @@ class GuardianPuzWorkflowTests(unittest.TestCase):
             self.assertNotIn("Other_123.puz", page)
             self.assertEqual(handler.status, 200)
 
+
+    def test_puz_clues_are_stored_in_number_order_across_before_down(self):
+        source = (ROOT / "fixtures" / "Quick_17637_guardian.txt").read_text(encoding="utf-8")
+        puzzle = guardian_to_puz.parse_guardian_source(source)
+        data = guardian_to_puz.make_puz(puzzle, title="Guardian Quick 17637")
+
+        width, height = data[0x2C], data[0x2D]
+        clue_count = int.from_bytes(data[0x2E:0x30], "little")
+        strings_start = 0x34 + (width * height * 2)
+        strings = data[strings_start:].split(b"\0")
+        clues = [value.decode("cp1252") for value in strings[3:3 + clue_count]]
+
+        across_starts, down_starts = guardian_to_puz._number_slots(puzzle)
+        expected = []
+        for direction_order, starts, clue_map in (
+            (0, across_starts, puzzle["across_clues"]),
+            (1, down_starts, puzzle["down_clues"]),
+        ):
+            for number, coord in starts:
+                expected.append((number, direction_order, clue_map[coord]))
+        expected.sort(key=lambda item: (item[0], item[1]))
+
+        self.assertEqual(clues, [clue for _number, _direction, clue in expected])
+        self.assertNotEqual(
+            clues[:len(puzzle["across_clues"])],
+            list(puzzle["across_clues"].values())
+        )
+
+
     def test_rmr_route_and_converter_are_absent(self):
         source = (ROOT.parent / "sidecar_web.py").read_text(encoding="utf-8")
         self.assertNotIn('elif path == "/rmr"', source)
