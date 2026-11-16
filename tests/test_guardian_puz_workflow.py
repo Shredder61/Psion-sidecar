@@ -35,7 +35,7 @@ class GuardianPuzWorkflowTests(unittest.TestCase):
         width, height = data[0x2C], data[0x2D]
         clue_count = int.from_bytes(data[0x2E:0x30], "little")
         strings_start = 0x34 + (width * height * 2)
-        strings = data[strings_start:].split(b"\\0")
+        strings = data[strings_start:].split(b"\0")
         clues = [value.decode("cp1252") for value in strings[3:3 + clue_count]]
 
         across_starts, down_starts = guardian_to_puz._number_slots(puzzle)
