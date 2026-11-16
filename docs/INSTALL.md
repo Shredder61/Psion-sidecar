@@ -2,6 +2,23 @@
 
 These instructions assume a Raspberry Pi on a trusted home network, Raspberry Pi OS, Python 3, and an account with `sudo` access.
 
+## Standard installation layout
+
+The documented Raspberry Pi deployment uses the same paths and service arrangement on standalone Pis and Pis that also run InkyPi. Sidecar remains a separate service; do not change the InkyPi application or its service when installing or updating Sidecar.
+
+| Component | Standard location or setting |
+|---|---|
+| Git checkout | User-specific; set in `/etc/default/psion-sidecar` |
+| Live application | `/opt/psion-sidecar` |
+| Service account | `sidecar` |
+| Systemd service | `psion-sidecar.service` |
+| Crossword archive | `/opt/psion-sidecar/crosswords` |
+| Updater | `/usr/local/sbin/update-psion-sidecar` |
+| Updater configuration | `/etc/default/psion-sidecar` |
+| Application backups | `/var/backups/psion-sidecar` |
+
+The application files are root-owned. The `sidecar` account needs write access to the crossword archive.
+
 ## 1. Clone the repository
 
 Run these commands on the Raspberry Pi:
@@ -119,13 +136,44 @@ sudo journalctl -u psion-sidecar.service -n 100 --no-pager
 
 If the service does not start or a crossword download fails, check the logs. A `PermissionError` or `Permission denied` message involving `crosswords` usually indicates a directory or file permission problem.
 
-## 5. Optional: install the updater
+## 5. Install and configure the updater
 
 The repository includes `scripts/update-psion-sidecar`, which fetches the latest `main` branch into a temporary staging directory, checks the Python files, backs up the installed application files, updates the service, and checks that the homepage responds. It also checks that the `sidecar` account can write to crossword storage before and after the update. It does not merge or advance your local Git checkout, so a failed installation cannot leave the checkout ahead of the files installed in `/opt/psion-sidecar`.
 
-The script assumes the repository is at `/home/pi/Psion-sidecar` and that the Linux account `pi` owns the Git checkout. If your checkout or account differs, edit `REPO` and `REPO_USER` near the top of the script before installing it.
+The updater code is identical on every Raspberry Pi. Machine-specific Git checkout settings are kept separately in the root-owned file `/etc/default/psion-sidecar`. **Create this configuration file on every Raspberry Pi**, using the actual checkout path and the Linux account that owns that checkout. This keeps each installation explicit and allows the same updater script to be used unchanged on all Pis.
 
-From the repository root, install it with:
+For the two documented deployments, the settings are:
+
+| Installation | `REPO` | `REPO_USER` |
+|---|---|---|
+| Original Raspberry Pi | `/home/pi/Psion-sidecar` | `pi` |
+| InkyPi Kitchen | `/home/inkypikitch/psion-sidecar-github` | `inkypikitch` |
+
+For the original Raspberry Pi, create the configuration with:
+
+```bash
+sudo tee /etc/default/psion-sidecar >/dev/null <<'EOF'
+REPO="/home/pi/Psion-sidecar"
+REPO_USER="pi"
+EOF
+sudo chown root:root /etc/default/psion-sidecar
+sudo chmod 0644 /etc/default/psion-sidecar
+```
+
+For InkyPi Kitchen, use:
+
+```bash
+sudo tee /etc/default/psion-sidecar >/dev/null <<'EOF'
+REPO="/home/inkypikitch/psion-sidecar-github"
+REPO_USER="inkypikitch"
+EOF
+sudo chown root:root /etc/default/psion-sidecar
+sudo chmod 0644 /etc/default/psion-sidecar
+```
+
+For any other Raspberry Pi, substitute its own checkout path and checkout-owner account. The configuration file must be owned by `root:root` and must not be group- or world-writable. The updater checks these permissions before sourcing it.
+
+From the repository root, install the updater with:
 
 ```bash
 sudo install -o root -g root -m 0755 scripts/update-psion-sidecar /usr/local/sbin/update-psion-sidecar

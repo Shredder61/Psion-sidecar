@@ -28,7 +28,7 @@ Sidecar uses a common application codebase on both hosting platforms. The web in
 | Deployment | How Sidecar runs | Installation and update guidance |
 |---|---|---|
 | Raspberry Pi (standalone) | A systemd service, typically installed under `/opt/psion-sidecar`. | [Raspberry Pi installation](docs/INSTALL.md). The repository includes `scripts/update-psion-sidecar` for the documented standard installation. |
-| Raspberry Pi alongside InkyPi | Sidecar runs as its own systemd service alongside the separate InkyPi application. | This is a deployment arrangement, not a separate Sidecar application. Keep the InkyPi service and configuration independent; back up and update the Sidecar checkout and restart only its service. |
+| Raspberry Pi alongside InkyPi | Sidecar runs as its own systemd service alongside the separate InkyPi application. | Use the same portable Raspberry Pi updater as a standalone installation. Keep the InkyPi application and service independent; the updater changes only Sidecar. |
 | Android with Termux | A runit service managed by `termux-services`. | [Android / Termux installation](docs/TERMUX-INSTALL.md), including the Termux installer and updater scripts. |
 
 The InkyPi arrangement allows one Raspberry Pi to host Sidecar while continuing to run InkyPi for an e-Ink display. The two applications have separate services: updating or restarting Sidecar does not require changing the InkyPi application or its service.
@@ -37,9 +37,8 @@ The InkyPi arrangement allows one Raspberry Pi to host Sidecar while continuing 
 
 Use the update procedure for the hosting platform:
 
-- **Standard Raspberry Pi installation:** follow [the Raspberry Pi updater instructions](docs/INSTALL.md#5-optional-install-the-updater). The supplied updater stages the latest GitHub `main`, backs up the installed application files, installs them and checks the web server.
+- **All Raspberry Pi installations, including InkyPi deployments:** use `scripts/update-psion-sidecar`, installed as `/usr/local/sbin/update-psion-sidecar`, as described in [the Raspberry Pi updater instructions](docs/INSTALL.md#5-install-and-configure-the-updater). The updater reads the machine-specific checkout path and owner from `/etc/default/psion-sidecar`, stages the latest GitHub `main`, backs up the installed application files, installs them and checks the Sidecar service and homepage. It does not change the separate InkyPi application or service.
 - **Android / Termux:** use `scripts/update-termux-sidecar` as described in [the Termux update instructions](docs/TERMUX-INSTALL.md#7-update-an-installed-instance). The updater targets one selected Termux service and leaves other instances and their service definitions alone.
-- **Custom Raspberry Pi arrangements, including InkyPi deployments:** first back up the Sidecar application and its crossword archive. Check that the Git working tree is clean, update the Sidecar checkout, compile-check the Python files, and restart only the Sidecar systemd service. Do not replace or restart the separate InkyPi application or service.
 
 After any update, check the Sidecar service status and open its homepage. Then test the software catalogue and crossword download workflow. A successful HTTP health check alone does not prove that external searches or downloads work.
 
