@@ -31,13 +31,64 @@ class GuardianPuzWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "Quick_17637.puz"
             output.write_bytes(b"existing")
-            original = guardian_pi.fetch_source
-            try:
-                guardian_pi.fetch_source = lambda *_: self.fail("must not fetch")
-                self.assertTrue(guardian_pi.download_one("quick", 17637, directory))
-            finally:
-                guardian_pi.fetch_source = original
+
+            with patch.object(guardian_pi, "fetch_source") as fetch:
+                self.assertTrue(
+                    guardian_pi.download_one("quick", 17637, directory)
+                )
+                fetch.assert_not_called()
+
             self.assertEqual(output.read_bytes(), b"existing")
+
+    def test_archive_lists_only_puz_files(self):
+        class FakeHandler:
+            def __init__(self):
+                self.wfile = io.BytesIO()
+                self.status = None
+                self.headers = {}
+
+            def send_response(self, status):
+                self.status = status
+
+            def send_header(self, name, value):
+                self.headers[name] = value
+
+            def end_headers(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory)
+
+            for filename in (
+                "Quick_17637.puz",
+                "Quick_17636_pending.puz",
+                "Quick_17635.txt",
+                "Cryptic_30109.puz",
+                "Cryptic_30108.txt",
+                "Other_123.puz",
+            ):
+                (archive / filename).write_bytes(b"test")
+
+            handler = FakeHandler()
+
+            with patch.object(sidecar_web, "ROOT", archive), \
+                    patch.object(
+                        guardian_pi,
+                        "get_latest_number",
+                        return_value=None
+                    ):
+                sidecar_web.SidecarHandler.send_guardian_crossword(handler)
+
+            page = handler.wfile.getvalue().decode("utf-8")
+
+            self.assertIn("Quick_17637.puz", page)
+            self.assertIn("Quick_17636_pending.puz", page)
+            self.assertIn("Cryptic_30109.puz", page)
+
+            self.assertNotIn("Quick_17635.txt", page)
+            self.assertNotIn("Cryptic_30108.txt", page)
+            self.assertNotIn("Other_123.puz", page)
+            self.assertEqual(handler.status, 200)
 
     def test_rmr_route_and_converter_are_absent(self):
         source = (ROOT.parent / "sidecar_web.py").read_text(encoding="utf-8")
@@ -45,13 +96,6 @@ class GuardianPuzWorkflowTests(unittest.TestCase):
         self.assertNotIn("def handle_rmr", source)
         self.assertNotIn("def send_rmr_download", source)
         self.assertNotIn("crossword_converter", source)
-
-    def test_archive_globs_only_puz_files(self):
-        source = (ROOT.parent / "sidecar_web.py").read_text(encoding="utf-8")
-        self.assertIn('ROOT.glob("Quick_*.puz")', source)
-        self.assertIn('ROOT.glob("Cryptic_*.puz")', source)
-        self.assertNotIn('_converted.txt', source)
-        self.assertNotIn('"/rmr?', source)
 
     def test_archive_is_displayed_in_numeric_descending_order(self):
         class FakeHandler:

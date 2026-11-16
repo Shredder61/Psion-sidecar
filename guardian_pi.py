@@ -410,6 +410,32 @@ def download_one(kind, number, output_dir, overwrite=False, no_solutions=False,
     try:
         number = validate_number(kind, number)
         os.makedirs(output_dir, exist_ok=True)
+        label = SERIES[kind]["label"]
+
+        # Reuse an existing completed file without contacting Guardian.
+        # Pending files are deliberately not checked here: they must be
+        # fetched again so they can be upgraded when solutions are published.
+        if no_solutions:
+            existing_filename = "%s_%d_no_solutions.puz" % (label, number)
+        else:
+            existing_filename = "%s_%d.puz" % (label, number)
+
+        existing_path = os.path.join(output_dir, existing_filename)
+
+        if os.path.exists(existing_path) and not overwrite:
+            print("Already exists - skipped:", existing_path)
+
+            # A completed PUZ makes an older pending copy redundant.
+            if not no_solutions:
+                pending_path = os.path.join(
+                    output_dir,
+                    "%s_%d_pending.puz" % (label, number)
+                )
+                if os.path.exists(pending_path):
+                    os.remove(pending_path)
+                    print("Removed obsolete pending file:", pending_path)
+
+            return "skipped" if return_status else True
 
         # Fetch first, so an existing pending puzzle can be upgraded.
         source, parser = fetch_source(

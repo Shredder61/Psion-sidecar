@@ -160,19 +160,19 @@ The standalone downloader includes compatibility code for Python 2.7 and Python 
 
 ## Guardian crossword Sidecar downloader
 
-The Sidecar web interface uses `guardian_pi.py` to process crossword download requests and presents the results through a browser.
+The Sidecar web interface uses `guardian_pi.py` to process crossword download requests. When a request succeeds, Sidecar sends the generated Across Lite (`.puz`) file directly to the browser as a file attachment. There is no intermediate completion page, and Guardian source text is not sent to the Psion.
 
-After a successful request, the completion page provides a single download link for the generated Across Lite (`.puz`) file, with the message: “Downloaded and converted to PUZ format for opening in RMR or FatCatz Crosswords”.
+If the latest puzzle has been downloaded without solutions, the homepage offers the link “DOWNLOAD (You can check again later for published solutions)”. Selecting it requests the puzzle again from the Guardian. If solutions have since been published, Sidecar generates and serves the solved PUZ file; otherwise it serves the pending-solutions PUZ file.
 
-The archive lists previously downloaded crossword `.puz` files stored in the project's `crosswords/` directory. Each entry provides a PUZ download link.
+The archive lists previously downloaded crossword `.puz` files stored in the project's `crosswords/` directory. Each entry provides a direct PUZ download link.
 
 Guardian source data is fetched and converted in memory. Only the generated `.puz` file is saved or offered for download.
 
 ## Opening Guardian crosswords in RMR / FatCatz Crossword
 
-Sidecar converts the Guardian's native crossword data into a standard Across Lite (`.puz`) file. Select the PUZ download link on the completion page and save the file on the Psion. The resulting file can be opened directly in either RMR Crossword or FatCatz Crossword.
+Sidecar converts the Guardian's native crossword data into a standard Across Lite (`.puz`) file and sends it directly as a browser file attachment. When using the Psion, follow the browser's normal file-transfer prompts to save the received `.puz` file. The resulting file can be opened directly in either RMR Crossword or FatCatz Crossword.
 
-Sidecar saves and serves only the generated PUZ file.
+Sidecar saves and serves only the generated PUZ file; it does not display an intermediate completion page or deliver the Guardian source text to the Psion.
 
 - **Sidecar conversion:** Request the crossword, download the `.puz` file, and open it in RMR Crossword or FatCatz Crossword.
 
