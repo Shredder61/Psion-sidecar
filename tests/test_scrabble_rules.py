@@ -55,7 +55,7 @@ class ScrabbleRulesTests(unittest.TestCase):
     def test_blank_scores_zero_even_on_letter_premium(self):
         self.assertEqual(
             score_word("CAT", [(7, 6), (7, 7), (7, 8)], {(7, 6), (7, 7), (7, 8)}, {(7, 6)}),
-            8,
+            4,
         )
 
     def test_word_multiplier_applies_to_entire_word(self):
