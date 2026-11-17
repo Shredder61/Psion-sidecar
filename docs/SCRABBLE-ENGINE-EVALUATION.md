@@ -34,18 +34,25 @@ The Sidecar dictionary must be British English, independently replaceable, and r
 
 ### Selected candidate: British ESDB (formerly SCOWL)
 
-Use the **English Speller Database (ESDB)** maintained by the en-wl project, release `rel-2026.02.25`, as the source for the first British-English game lexicon.
+Use the **English Speller Database (ESDB)** maintained by the en-wl project, pinned to release `rel-2026.02.25`, as the source for the first British-English game lexicon.
 
-- ESDB explicitly supports British spelling code `B` (British `-ise`) and `Z` (British `-ize` / Oxford spelling).
-- The upstream README gives the extraction form `./scowl word-list 60 B,Z 5` for a British list including both spelling families and variants.
-- ESDB size 80 is described by its maintainer as including unusual but generally valid current words of the sort used in word games such as Scrabble. Size 85 includes valid words that may no longer be used in modern English, so do not include size 85.
-- The project describes its combined work as available under an MIT-like licence, with third-party source notices in its `Copyright` file.
-- Upstream release: https://github.com/en-wl/wordlist/releases/tag/rel-2026.02.25
-- Upstream repository and extraction documentation: https://github.com/en-wl/wordlist
+- ESDB supports British spelling code `B` (British `-ise`) and `Z` (British `-ize` / Oxford spelling).
+- Upstream documents `./scowl word-list 60 B,Z 5` as the way to extract a British list including both spelling families and variants.
+- Upstream says size 60 is its vetted default and size 70 should also be usable; larger lists are less carefully checked and may contain misspelled or invalid words. Therefore start at size 70, not 80.
+- The upstream `Copyright` file grants permission to use, copy, modify, distribute and sell SCOWLv2 or word lists created from it, provided its copyright and permission notice are reproduced in copies and supporting documentation. It also describes additional notices that apply to certain data combinations. Our extraction uses only British `B,Z`, not Australian `D`, and must remain no larger than size 80 to avoid the stated UKACD notice for lists larger than 80.
+- Release: https://github.com/en-wl/wordlist/releases/tag/rel-2026.02.25
+- Source and extraction documentation: https://github.com/en-wl/wordlist
+- Exact release copyright notice: https://github.com/en-wl/wordlist/blob/rel-2026.02.25/Copyright
 
-**Proposed game-list profile:** ESDB size 80; spellings `B,Z`; variant level 5; exclude abbreviations, proper names, Roman numerals, non-word entries, multi-word entries, and any entry that cannot be represented as a single A-Z tile word of 2–15 letters. Preserve both British `-ise` and `-ize` forms. Do not include American-only `A`, Canadian `C` or Australian `D` spellings. The precise extraction/filter command must be tested against the pinned release before the list is generated.
+**Initial extraction profile:** size 70; spellings `B,Z`; variant level 5; exclude special categories, abbreviations, and diacritical marks; then retain only single-token A-Z entries of 2–15 letters. The upstream command to test from the root of the pinned checkout is:
 
-This is a **British-English Scrabble-style lexicon**, not an official Collins or WESPA tournament list. ESDB is primarily a spelling database; size 80 is a candidate vocabulary threshold, not proof that every resulting entry is accepted in CSW24. The generated word count, exclusions, source revision, command, checksum and all applicable notices must be recorded. Keep the generated list replaceable so another authorised British lexicon can be added later.
+```sh
+./scowl word-list 70 B,Z 5 --categories= --wo-poses=abbr --deaccent > british_esdb_raw.txt
+```
+
+The final filtering step must be a small reproducible script, not an undocumented manual edit. It should uppercase entries, keep only ASCII A-Z words of 2–15 letters, remove duplicates, sort deterministically, and write `british_esdb.txt`. Preserve `british_esdb_raw.txt` only as a build artifact if needed; do not commit it unless its provenance and notices are included. Record the exact raw and final word counts, SHA-256 checksums, source tag, command, filter-script version and all required notices.
+
+This is a **British-English Scrabble-style lexicon**, not an official Collins or WESPA tournament list. ESDB is a spelling database, not a Scrabble rules authority. Size 70 is a conservative starting vocabulary level, not proof that every entry is valid under CSW24. We must audit sample words and known exclusions, and must not claim CSW24 compatibility.
 
 Do not use ENABLE2K as the default game list: it is predominantly North American. Do not silently mix it into the British ESDB output.
 
@@ -70,7 +77,7 @@ Use repeated runs and report median timings. Keep build time separate from norma
 
 ## Next engineering steps
 
-1. Confirm the intended English word authority and identify a redistributable word list.
+1. Generate and audit the pinned British ESDB-derived word list.
 2. Create a reproducible benchmark fixture with fixed racks and board positions.
 3. Evaluate the MIT GADDAG candidate in an isolated test checkout, without copying it into Sidecar yet.
 4. Establish DAWG implementation licensing or select a separately licensed DAWG implementation.
@@ -96,4 +103,4 @@ Official reference:
 
 CSW24 is proprietary HarperCollins material. The published Zyzzyva terms restrict use of the word lists. Do not scrape, extract, convert, reconstruct or redistribute the list from Zyzzyva, the printed book or another application.
 
-The game must be described as using ENABLE2K unless a different authorised dictionary is explicitly selected. It must not be described as CSW24-compliant or tournament legal.
+The game must be described as using the British ESDB-derived lexicon unless a different authorised dictionary is explicitly selected. It must not be described as CSW24-compliant or tournament legal.
