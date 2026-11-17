@@ -68,3 +68,24 @@ Use repeated runs and report median timings. Keep build time separate from norma
 - Do not introduce Flask, Pygame, PyTorch or a native build dependency.
 - Do not load untrusted pickle data.
 - Preserve the standard-library-only core and the existing crossword/catalogue routes.
+
+
+## Selected lexicon target: Collins Scrabble Words
+
+The project target is **Collins Scrabble Words 2024 (CSW24)**, the seventh edition. It is the WESPA-endorsed lexicon effective for tournament and club play from 1 January 2025. The published list contains more than 280,000 permissible words and includes World English variants and inflected forms.
+
+Official reference:
+- Collins Official SCRABBLE Words, seventh edition, ISBN 978-0-00-866072-7.
+- Collins product page: https://collins.co.uk/products/9780008660727
+- Collins Zyzzyva terms: https://scrabble.collinsdictionary.com/tools/
+
+### Licensing restriction
+
+CSW24 is a proprietary HarperCollins word list. Collins' published Zyzzyva terms state that the word lists are copyright material and prohibit copying, editing, disseminating, reverse-engineering or using them beyond the permitted private, non-commercial use. The free Zyzzyva software being GPL does not make the embedded Collins word lists GPL or open data.
+
+Consequently:
+- CSW24 is the rules/validation target, not a word list we can bundle in the public Sidecar repository.
+- Do not scrape, extract, convert, reconstruct or redistribute the list from Zyzzyva, the printed book or another application.
+- A public Sidecar release needs explicit written permission/licensing from HarperCollins for the intended digital use and distribution, or a separately licensed lexicon with clearly disclosed differences.
+- The current WordDictionary interface can load a word list supplied by a user who has the appropriate rights, but this does not itself grant permission to redistribute that list.
+- Do not claim the game is CSW24-compliant until it is tested against an authorised CSW24 data source.
