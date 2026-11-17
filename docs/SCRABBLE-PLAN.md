@@ -23,7 +23,7 @@ The existing crossword downloader and catalogue must remain unchanged while Scra
 - Standard English tile distribution (100 tiles) and letter values.
 - Seven-tile racks and blank tiles.
 - First move covers the centre; subsequent moves connect to existing tiles.
-- Validate main and cross-words against the generated British ESDB size-80 lexicon (both British -ise and -ize forms; clearly identified as a non-tournament alternative, not CSW24).
+- Validate main and cross-words against the generated British ESDB size-70 lexicon (both British -ise and -ize forms; clearly identified as a non-tournament alternative, not CSW24).
 - Correct letter/word multipliers, bingo bonus, tile replenishment and end-game scoring.
 - Human versus computer, with a legal move generator.
 - Pass, exchange, new game, save and resume.
@@ -45,7 +45,7 @@ Do not commit to an external engine before a reproducible comparison on the Pi. 
 
 Measure dictionary build/load time, resident memory, rack move-generation time, full-board move-generation time, blank handling and legal-move completeness. Repeat on the HiBy/Termux after the Pi baseline.
 
-External repositories are research references, not automatically dependencies. Review each source licence and all dictionary/vocabulary terms before copying or bundling code or word lists. British ESDB is the selected initial lexicon source: preserve all upstream and third-party notices, pin the source release, record the extraction recipe and checksum, and identify it accurately. Do not bundle a commercial tournament lexicon.
+External repositories are research references, not automatically dependencies. Review each source licence and all dictionary/vocabulary terms before copying or bundling code or word lists. British ESDB is the selected initial lexicon source: start at size 70 with B and Z spellings, preserve all applicable upstream notices, pin the source release, record the extraction recipe and checksums, and identify it accurately. Do not bundle a commercial tournament lexicon.
 
 ## Architecture boundaries
 
