@@ -75,7 +75,7 @@ class MoveValidationTests(unittest.TestCase):
             {(7, 7): Tile("C"), (7, 8): Tile("A")},
             lambda word: word == "CA",
         )
-        self.assertEqual(result.score, 6)
+        self.assertEqual(result.score, 8)
 
     def test_blank_scores_zero_when_placed(self):
         result = evaluate_move(
