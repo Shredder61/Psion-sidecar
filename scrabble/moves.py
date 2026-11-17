@@ -98,6 +98,11 @@ def evaluate_move(board, placements, dictionary=None):
             raise InvalidMove(f"Square is already occupied: {square}")
         checked[square] = tile
 
+    # Check the opening-square requirement before line contiguity so an
+    # opening move that misses the centre reports the primary rule violation.
+    if board.is_empty and (7, 7) not in checked:
+        raise InvalidMove("The opening move must cover the centre square")
+
     rows = {row for row, _ in checked}
     columns = {column for _, column in checked}
     if len(rows) > 1 and len(columns) > 1:
@@ -114,10 +119,7 @@ def evaluate_move(board, placements, dictionary=None):
             if square not in checked and not board.is_occupied(square):
                 raise InvalidMove("Tiles in a move must be contiguous")
 
-    if board.is_empty:
-        if (7, 7) not in checked:
-            raise InvalidMove("The opening move must cover the centre square")
-    else:
+    if not board.is_empty:
         touches_board = any(
             board.is_occupied((row + dr, column + dc))
             for row, column in checked
