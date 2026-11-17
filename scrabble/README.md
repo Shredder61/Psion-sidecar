@@ -10,8 +10,8 @@ See [the development plan](../docs/SCRABBLE-PLAN.md) for scope, architecture, en
 
 - `rules.py` — English tile set, board premiums and scoring.
 - `board.py` — board state and tile placement.
-- `dictionary.py` — replaceable dictionary interface.
-- `moves.py` — legal move generation.
+- `dictionary.py` — replaceable, file-loaded word-list interface (no lexicon bundled).
+- `moves.py` — move validation and scoring; move generation will be added separately.
 - `game.py` — bag, racks, turns and game state.
 - `ai.py` — computer move selection.
 - `storage.py` — JSON save/resume.
