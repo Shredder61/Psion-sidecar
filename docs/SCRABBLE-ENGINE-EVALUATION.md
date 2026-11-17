@@ -30,25 +30,24 @@ Repository: https://github.com/vthorsteinsson/Skrafl
 
 ## Dictionary policy
 
-The Sidecar dictionary interface is independent of the lexicon format. A word list must have documented redistribution terms before it is included in a public Sidecar release.
+The Sidecar dictionary must be British English, independently replaceable, and redistributable with the public project. It must not be described as Collins/CSW24 or as an official tournament lexicon.
 
-### Selected initial lexicon: ENABLE2K
+### Selected candidate: British ESDB (formerly SCOWL)
 
-The selected initial dictionary is **ENABLE2K** (Enhanced North American Benchmark LExicon, revised millennial edition).
+Use the **English Speller Database (ESDB)** maintained by the en-wl project, release `rel-2026.02.25`, as the source for the first British-English game lexicon.
 
-- The original ENABLE2K documentation states that WORD.LST is in the public domain and may be used and distributed freely.
-- The original documentation explicitly describes it as a gift to the Scrabble community and says game designers may incorporate it.
-- The original revised edition reports 173,528 entries.
-- It is an older, primarily North American alternative lexicon, not a current Collins/WESPA tournament list.
-- The original documentation asks that the source and compilers be credited.
-- Reference copy and README: https://github.com/BartMassey/wordlists (see README-enable2k.txt).
-- Original documentation mirrored by Debian: https://sources.debian.org/src/scowl/6-2/r/enable/README
+- ESDB explicitly supports British spelling code `B` (British `-ise`) and `Z` (British `-ize` / Oxford spelling).
+- The upstream README gives the extraction form `./scowl word-list 60 B,Z 5` for a British list including both spelling families and variants.
+- ESDB size 80 is described by its maintainer as including unusual but generally valid current words of the sort used in word games such as Scrabble. Size 85 includes valid words that may no longer be used in modern English, so do not include size 85.
+- The project describes its combined work as available under an MIT-like licence, with third-party source notices in its `Copyright` file.
+- Upstream release: https://github.com/en-wl/wordlist/releases/tag/rel-2026.02.25
+- Upstream repository and extraction documentation: https://github.com/en-wl/wordlist
 
-The repository may include the ENABLE2K data only with its provenance and public-domain notice preserved. Before bundling, verify the exact source file, compare its contents with the published ENABLE2K distribution, record a checksum and document the normalisation/filtering applied for the game.
+**Proposed game-list profile:** ESDB size 80; spellings `B,Z`; variant level 5; exclude abbreviations, proper names, Roman numerals, non-word entries, multi-word entries, and any entry that cannot be represented as a single A-Z tile word of 2–15 letters. Preserve both British `-ise` and `-ize` forms. Do not include American-only `A`, Canadian `C` or Australian `D` spellings. The precise extraction/filter command must be tested against the pinned release before the list is generated.
 
-**Dictionary identity:** label the game dictionary “ENABLE2K”, not “Collins”, “CSW”, “SOWPODS” or “tournament legal”. Do not claim CSW24 compatibility.
+This is a **British-English Scrabble-style lexicon**, not an official Collins or WESPA tournament list. ESDB is primarily a spelling database; size 80 is a candidate vocabulary threshold, not proof that every resulting entry is accepted in CSW24. The generated word count, exclusions, source revision, command, checksum and all applicable notices must be recorded. Keep the generated list replaceable so another authorised British lexicon can be added later.
 
-A later British-English option can be considered separately, but only after its word-list provenance and redistribution rights have been checked. Do not silently merge unrelated lists or describe a hybrid as ENABLE2K.
+Do not use ENABLE2K as the default game list: it is predominantly North American. Do not silently mix it into the British ESDB output.
 
 ## Benchmark protocol
 
