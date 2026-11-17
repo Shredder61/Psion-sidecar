@@ -30,7 +30,7 @@ class MoveValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(InvalidMove, "contiguous"):
             evaluate_move(
                 Board(),
-                {(7, 6): Tile("C"), (7, 8): Tile("T")},
+                {(7, 6): Tile("C"), (7, 7): Tile("A"), (7, 9): Tile("T")},
             )
 
     def test_existing_tile_can_bridge_a_move(self):
