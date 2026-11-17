@@ -92,7 +92,11 @@ class Game:
         self.current_player = (self.current_player + 1) % len(self.players)
 
     def _finish_if_out(self, player_who_used_last_tile):
-        if not self.bag and not player_who_used_last_tile.rack:
+        if (
+            player_who_used_last_tile is not None
+            and not self.bag
+            and not player_who_used_last_tile.rack
+        ):
             self.ended = True
             for player in self.players:
                 if player is player_who_used_last_tile:
