@@ -75,6 +75,26 @@ class GameTests(unittest.TestCase):
         game.pass_turn()
         self.assertTrue(game.ended)
 
+    def test_passes_with_empty_bag_end_without_crashing(self):
+        game = Game.new_game(["Alice", "Bob"], seed=8)
+        game.bag = []
+        for _ in range(4):
+            game.pass_turn()
+        self.assertTrue(game.ended)
+
+    def test_playing_last_tile_scores_opponents_remaining_rack(self):
+        game = Game.new_game(["Alice", "Bob"], seed=12)
+        game.players[0].rack = ["C", "A"]
+        game.players[1].rack = ["Z", "E"]
+        game.bag = []
+        result = game.play_move({
+            (7, 7): Tile("C"),
+            (7, 8): Tile("A"),
+        }, {"CA"})
+        self.assertTrue(game.ended)
+        self.assertEqual(game.players[0].score, result.score + 11)
+        self.assertEqual(game.players[1].score, -11)
+
     def test_exchange_draws_before_returning_tiles(self):
         game = Game.new_game(["Alice", "Bob"], seed=9)
         game.players[0].rack = list("ABCDEFG")
