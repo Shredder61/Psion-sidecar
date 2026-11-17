@@ -100,10 +100,9 @@ class GameTests(unittest.TestCase):
         game.players[0].rack = list("ABCDEFG")
         game.bag = list("XYZ")
         game.exchange_tiles(["A", "B"])
-        self.assertEqual(len(game.player.rack), 7)
+        # Exchange advances the turn, so inspect the player who exchanged.
+        self.assertEqual(game.players[0].rack, list("CDEFGZY"))
         self.assertEqual(len(game.bag), 3)
-        self.assertNotIn("A", game.player.rack)
-        self.assertNotIn("B", game.player.rack)
         self.assertEqual(game.current_player, 1)
 
     def test_exchange_requires_enough_bag_tiles(self):
