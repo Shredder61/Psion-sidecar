@@ -30,9 +30,25 @@ Repository: https://github.com/vthorsteinsson/Skrafl
 
 ## Dictionary policy
 
-The Sidecar dictionary interface is independent of the lexicon format. No commercial tournament list or third-party repository resource is bundled.
+The Sidecar dictionary interface is independent of the lexicon format. A word list must have documented redistribution terms before it is included in a public Sidecar release.
 
-A word list must have documented redistribution terms before it is included in a public Sidecar release. The English lexicon must also be chosen deliberately: British English expectations and the intended Scrabble word authority need to be agreed before final game validation.
+### Selected initial lexicon: ENABLE2K
+
+The selected initial dictionary is **ENABLE2K** (Enhanced North American Benchmark LExicon, revised millennial edition).
+
+- The original ENABLE2K documentation states that WORD.LST is in the public domain and may be used and distributed freely.
+- The original documentation explicitly describes it as a gift to the Scrabble community and says game designers may incorporate it.
+- The original revised edition reports 173,528 entries.
+- It is an older, primarily North American alternative lexicon, not a current Collins/WESPA tournament list.
+- The original documentation asks that the source and compilers be credited.
+- Reference copy and README: https://github.com/BartMassey/wordlists (see README-enable2k.txt).
+- Original documentation mirrored by Debian: https://sources.debian.org/src/scowl/6-2/r/enable/README
+
+The repository may include the ENABLE2K data only with its provenance and public-domain notice preserved. Before bundling, verify the exact source file, compare its contents with the published ENABLE2K distribution, record a checksum and document the normalisation/filtering applied for the game.
+
+**Dictionary identity:** label the game dictionary “ENABLE2K”, not “Collins”, “CSW”, “SOWPODS” or “tournament legal”. Do not claim CSW24 compatibility.
+
+A later British-English option can be considered separately, but only after its word-list provenance and redistribution rights have been checked. Do not silently merge unrelated lists or describe a hybrid as ENABLE2K.
 
 ## Benchmark protocol
 
@@ -70,22 +86,15 @@ Use repeated runs and report median timings. Keep build time separate from norma
 - Preserve the standard-library-only core and the existing crossword/catalogue routes.
 
 
-## Selected lexicon target: Collins Scrabble Words
+## Collins Scrabble Words reference and restriction
 
-The project target is **Collins Scrabble Words 2024 (CSW24)**, the seventh edition. It is the WESPA-endorsed lexicon effective for tournament and club play from 1 January 2025. The published list contains more than 280,000 permissible words and includes World English variants and inflected forms.
+CSW24 remains a useful comparison point for the intended international/UK Scrabble experience, but it is **not** the bundled dictionary and we will not seek a licence.
 
 Official reference:
 - Collins Official SCRABBLE Words, seventh edition, ISBN 978-0-00-866072-7.
 - Collins product page: https://collins.co.uk/products/9780008660727
 - Collins Zyzzyva terms: https://scrabble.collinsdictionary.com/tools/
 
-### Licensing restriction
+CSW24 is proprietary HarperCollins material. The published Zyzzyva terms restrict use of the word lists. Do not scrape, extract, convert, reconstruct or redistribute the list from Zyzzyva, the printed book or another application.
 
-CSW24 is a proprietary HarperCollins word list. Collins' published Zyzzyva terms state that the word lists are copyright material and prohibit copying, editing, disseminating, reverse-engineering or using them beyond the permitted private, non-commercial use. The free Zyzzyva software being GPL does not make the embedded Collins word lists GPL or open data.
-
-Consequently:
-- CSW24 is the rules/validation target, not a word list we can bundle in the public Sidecar repository.
-- Do not scrape, extract, convert, reconstruct or redistribute the list from Zyzzyva, the printed book or another application.
-- A public Sidecar release needs explicit written permission/licensing from HarperCollins for the intended digital use and distribution, or a separately licensed lexicon with clearly disclosed differences.
-- The current WordDictionary interface can load a word list supplied by a user who has the appropriate rights, but this does not itself grant permission to redistribute that list.
-- Do not claim the game is CSW24-compliant until it is tested against an authorised CSW24 data source.
+The game must be described as using ENABLE2K unless a different authorised dictionary is explicitly selected. It must not be described as CSW24-compliant or tournament legal.
