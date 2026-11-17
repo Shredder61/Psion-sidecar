@@ -17,4 +17,4 @@ See [the development plan](../docs/SCRABBLE-PLAN.md) for scope, architecture, en
 - `storage.py` — JSON save/resume.
 - `web.py` — route adapter for Sidecar.
 
-No dictionary is bundled yet. Dictionary licensing and the choice between DAWG and GADDAG are part of the initial evaluation.
+The selected initial lexicon is ENABLE2K, an older public-domain Scrabble alternative (not CSW24 and not a current tournament list). Its exact source file, checksum, attribution and any normalisation must be recorded before it is added. See [the engine evaluation](../docs/SCRABBLE-ENGINE-EVALUATION.md).
