@@ -17,4 +17,4 @@ See [the development plan](../docs/SCRABBLE-PLAN.md) for scope, architecture, en
 - `storage.py` — JSON save/resume.
 - `web.py` — route adapter for Sidecar.
 
-The selected initial lexicon is ENABLE2K, an older public-domain Scrabble alternative (not CSW24 and not a current tournament list). Its exact source file, checksum, attribution and any normalisation must be recorded before it is added. See [the engine evaluation](../docs/SCRABBLE-ENGINE-EVALUATION.md).
+The selected initial lexicon source is British ESDB (formerly SCOWL), using British -ise and -ize forms at size 80. The generated list must be filtered, audited and accompanied by all required notices before inclusion. It is not CSW24 or a current tournament list. See [the engine evaluation](../docs/SCRABBLE-ENGINE-EVALUATION.md).
